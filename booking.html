@@ -5,6 +5,9 @@
   <title>Book Laundry Pickup – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Load Firebase -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     body {
       margin:0;
@@ -82,22 +85,43 @@
   </div>
 
   <script type="module">
-    import { supabase } from "./supabase.js";
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    import {
+      collection,
+      doc,
+      getDocs,
+      addDoc,
+      setDoc,
+      updateDoc,
+      query,
+      where
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    let currentUser = null;
 
     // -----------------------------
     // AUTH CHECK
     // -----------------------------
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        currentUser = user;
+      }
+    });
 
     // -----------------------------
     // NOTIFICATION SENDER
     // -----------------------------
     async function sendNotification(userId, title, message) {
-      await supabase.from("notifications").insert({
+      await addDoc(collection(db, "notifications"), {
         user_id: userId,
         title,
-        message
+        message,
+        createdAt: Date.now()
       });
     }
 
@@ -105,18 +129,20 @@
     // AUTO-WASHER MATCHING LOGIC
     // -----------------------------
     async function findBestWasher() {
-      // Get all approved + available washers
-      const { data: washers } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "washer")
-        .eq("verification_status", "approved")
-        .eq("available", true);
+      const washersRef = collection(db, "users");
 
-      if (!washers || washers.length === 0) return null;
+      const q = query(
+        washersRef,
+        where("role", "==", "washer"),
+        where("verification_status", "==", "approved"),
+        where("available", "==", true)
+      );
 
-      // Simple MVP matching:
-      // Pick the washer with the smallest radius (closest)
+      const snap = await getDocs(q);
+      const washers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      if (washers.length === 0) return null;
+
       washers.sort((a, b) => (a.radius || 999) - (b.radius || 999));
 
       return washers[0].id;
@@ -126,6 +152,8 @@
     // CREATE ORDER
     // -----------------------------
     window.createOrder = async function () {
+      if (!currentUser) return;
+
       const loads = Number(document.getElementById("loads").value);
       const pickupInput = document.getElementById("pickupTime").value;
       const notes = document.getElementById("notes").value.trim();
@@ -148,29 +176,19 @@
       const washerId = await findBestWasher();
 
       // 2. Create order
-      const { data: order, error } = await supabase
-        .from("orders")
-        .insert({
-          client_id: session.user.id,
-          washer_id: washerId,
-          status: washerId ? "requested" : "requested",
-          loads,
-          pickup_time,
-          notes
-        })
-        .select("*")
-        .single();
-
-      if (error) {
-        console.error("Create order error:", error);
-        alert("Error creating order.");
-        loading.style.display = "none";
-        return;
-      }
+      const orderRef = await addDoc(collection(db, "orders"), {
+        client_id: currentUser.uid,
+        washer_id: washerId,
+        status: "requested",
+        loads,
+        pickup_time,
+        notes,
+        createdAt: Date.now()
+      });
 
       // 3. Notify client
       await sendNotification(
-        session.user.id,
+        currentUser.uid,
         "Order Created",
         "Your laundry order has been created!"
       );
@@ -187,7 +205,7 @@
       loading.style.display = "none";
 
       // 5. Redirect to order detail
-      window.location.href = `client-order-detail.html?order_id=${order.id}`;
+      window.location.href = `client-order-detail.html?order_id=${orderRef.id}`;
     };
   </script>
 </body>
