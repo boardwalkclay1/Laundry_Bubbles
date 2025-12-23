@@ -47,6 +47,7 @@
             text-decoration: none;
             border: 2px solid #D96E30;
             margin-top: 10px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -54,15 +55,108 @@
 <body>
     <header>Available Jobs</header>
 
-    <div class="container">
-        <div class="job-box">
-            Pickup at: 123 Main St  
-            Time: 3:00 PM  
-            Notes: Leave at door  
-            <a href="washer_pickup.html" class="btn">Accept Job</a>
-        </div>
-
-        <a href="washer.html" class="btn">Back to Dashboard</a>
+    <div class="container" id="jobsContainer">
+        Loading jobs...
     </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore,
+            collection,
+            query,
+            where,
+            onSnapshot,
+            doc,
+            updateDoc
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+            authDomain: "launrdy-bubbles.firebaseapp.com",
+            projectId: "launrdy-bubbles",
+            storageBucket: "launrdy-bubbles.firebasestorage.app",
+            messagingSenderId: "625079841514",
+            appId: "1:625079841514:web:472b2721f4acb836111d93",
+            measurementId: "G-QT16Z65J1E"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const jobsContainer = document.getElementById("jobsContainer");
+
+        function renderJobs(jobs, uid) {
+            jobsContainer.innerHTML = "";
+
+            if (jobs.length === 0) {
+                jobsContainer.innerHTML = "<p>No available jobs right now.</p>";
+                return;
+            }
+
+            jobs.forEach(job => {
+                const div = document.createElement("div");
+                div.className = "job-box";
+
+                const pickupTime = job.pickupWindow || "Flexible";
+
+                div.innerHTML = `
+                    Pickup at: ${job.pickupAddress || "Unknown"}<br>
+                    Time: ${pickupTime}<br>
+                    Notes: ${job.notes || "None"}<br>
+                    <button class="btn" data-id="${job.id}">Accept Job</button>
+                `;
+
+                div.querySelector("button").onclick = () => acceptJob(job.id, uid);
+
+                jobsContainer.appendChild(div);
+            });
+
+            const back = document.createElement("a");
+            back.href = "washer-dashboard.html";
+            back.className = "btn";
+            back.innerText = "Back to Dashboard";
+            jobsContainer.appendChild(back);
+        }
+
+        async function acceptJob(jobId, uid) {
+            const ref = doc(db, "pickup_requests", jobId);
+
+            await updateDoc(ref, {
+                washerId: uid,
+                status: "pending_acceptance"
+            });
+
+            window.location.href = "washer_pickup.html?jobId=" + jobId;
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            const ref = collection(db, "pickup_requests");
+
+            const q = query(
+                ref,
+                where("status", "==", "requested")
+            );
+
+            onSnapshot(q, (snapshot) => {
+                const jobs = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                renderJobs(jobs, user.uid);
+            });
+        });
+    </script>
 </body>
 </html>
