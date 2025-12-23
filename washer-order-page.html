@@ -79,155 +79,156 @@
 
     <textarea id="message" placeholder="Optional message for the client"></textarea>
 
-    <button class="btn" onclick="updateStatus()">Save Update</button>
+    <button class="btn" id="saveBtn">Save Update</button>
   </div>
 
   <div class="card">
     <h2>Live Location Sharing</h2>
-    <button class="btn secondary" onclick="startLocationSharing()">Share My Location</button>
+    <button class="btn secondary" id="shareBtn">Share My Location</button>
     <div class="small" id="locationStatus">Location sharing is off.</div>
   </div>
 
   <a class="btn secondary" href="washer-orders.html">Back to Washer Orders</a>
 
+  <!-- FIREBASE VERSION -->
   <script type="module">
-    import { supabase } from "./supabase.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore,
+      doc,
+      getDoc,
+      updateDoc,
+      setDoc,
+      collection,
+      addDoc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     function getOrderId() {
       return new URLSearchParams(window.location.search).get("order_id");
     }
 
     const orderId = getOrderId();
-    let order = null;
     let watchId = null;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+    const orderCard = document.getElementById("orderCard");
+    const saveBtn = document.getElementById("saveBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const locationStatus = document.getElementById("locationStatus");
 
-    // Real-time subscription to keep order fresh
-    supabase
-      .channel("washer-order-" + orderId)
-      .on(
-        "postgres_changes",
-        { event:"UPDATE", schema:"public", table:"orders", filter:`id=eq.${orderId}` },
-        payload => {
-          order = payload.new;
-          renderOrder();
-        }
-      )
-      .subscribe();
-
-    async function loadOrder() {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .eq("washer_id", session.user.id)
-        .single();
-
-      if (error || !data) {
-        document.getElementById("orderCard").innerText = "Order not found.";
-        return;
-      }
-
-      order = data;
-      renderOrder();
-    }
+    let currentOrder = null;
 
     function renderOrder() {
-      const card = document.getElementById("orderCard");
-      if (!order) return;
+      if (!currentOrder) return;
 
-      const pickup = order.pickup_time
-        ? new Date(order.pickup_time).toLocaleString()
+      const pickup = currentOrder.pickupTime
+        ? new Date(currentOrder.pickupTime).toLocaleString()
         : "Not set";
 
-      card.innerHTML = `
-        <div><span class="label">Order ID:</span> #${order.id}</div>
-        <div><span class="label">Status:</span> ${order.status}</div>
-        <div><span class="label">Loads:</span> ${order.loads}</div>
+      orderCard.innerHTML = `
+        <div><span class="label">Order ID:</span> #${orderId}</div>
+        <div><span class="label">Status:</span> ${currentOrder.status}</div>
+        <div><span class="label">Loads:</span> ${currentOrder.loads || 0}</div>
         <div><span class="label">Pickup:</span> ${pickup}</div>
-        <div><span class="label">Notes:</span> ${order.notes || "None"}</div>
+        <div><span class="label">Notes:</span> ${currentOrder.notes || "None"}</div>
       `;
     }
 
-    window.updateStatus = async function () {
+    async function updateStatus(uid) {
       const newStatus = document.getElementById("statusSelect").value;
       const message = document.getElementById("message").value;
 
-      const { error: orderError } = await supabase
-        .from("orders")
-        .update({ status: newStatus })
-        .eq("id", orderId)
-        .eq("washer_id", session.user.id);
+      const ref = doc(db, "orders", orderId);
 
-      if (orderError) {
-        console.error(orderError);
-        alert("Error updating order.");
-        return;
-      }
+      await updateDoc(ref, {
+        status: newStatus
+      });
 
-      const { error: eventError } = await supabase
-        .from("order_events")
-        .insert({
-          order_id: orderId,
-          status: newStatus,
-          message
-        });
-
-      if (eventError) {
-        console.error(eventError);
-      }
+      await addDoc(collection(db, "order_events"), {
+        orderId,
+        washerId: uid,
+        status: newStatus,
+        message,
+        createdAt: Date.now()
+      });
 
       alert("Status updated!");
-    };
+    }
 
-    // LOCATION SHARING
-    const locationStatus = document.getElementById("locationStatus");
-
-    window.startLocationSharing = function () {
+    function startLocationSharing(uid) {
       if (!navigator.geolocation) {
-        alert("Location is not supported on this device.");
+        alert("Location not supported.");
         return;
       }
 
       if (watchId !== null) {
-        alert("Location sharing is already on.");
+        alert("Location sharing already on.");
         return;
       }
 
       watchId = navigator.geolocation.watchPosition(
         async pos => {
-          const { error } = await supabase
-            .from("locations")
-            .upsert({
-              user_id: session.user.id,
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude
-            });
+          await setDoc(doc(db, "locations", uid), {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            updatedAt: Date.now()
+          });
 
-          if (error) {
-            console.error("Location update error:", error);
-            locationStatus.innerText = "Error sending location.";
-          } else {
-            locationStatus.innerText = "Location sharing is ON.";
-          }
+          locationStatus.innerText = "Location sharing is ON.";
         },
         err => {
-          console.error("Geolocation error:", err);
+          console.error(err);
           alert("Could not get your location.");
         },
         {
-          enableHighAccuracy:true,
-          maximumAge:5000,
-          timeout:10000
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
         }
       );
 
       locationStatus.innerText = "Trying to get your location...";
-    };
+    }
 
-    await loadOrder();
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const ref = doc(db, "orders", orderId);
+
+      // Real-time updates
+      onSnapshot(ref, (snap) => {
+        if (!snap.exists()) {
+          orderCard.innerText = "Order not found.";
+          return;
+        }
+        currentOrder = snap.data();
+        renderOrder();
+      });
+
+      saveBtn.onclick = () => updateStatus(user.uid);
+      shareBtn.onclick = () => startLocationSharing(user.uid);
+    });
   </script>
 </body>
 </html>
