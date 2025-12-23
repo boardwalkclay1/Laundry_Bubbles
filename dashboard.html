@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <title>Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Load Firebase -->
+  <script type="module" src="/firebase.js"></script>
 </head>
+
 <body style="font-family:Arial; padding:20px;">
 
   <h1>Dashboard</h1>
@@ -14,30 +18,63 @@
 
   <div id="adminTools" style="display:none; margin-top:20px;">
     <h2>Admin Tools</h2>
-    <button onclick="window.location.href='admin-dashboard.html'" style="padding:10px;">Go to Admin Dashboard</button>
+    <button onclick="window.location.href='admin-dashboard.html'" style="padding:10px;">
+      Go to Admin Dashboard
+    </button>
   </div>
 
   <script type="module">
-    import { supabase } from "./supabase.js";
+    import {
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    const SUPER_ADMIN = "boardwalkclay1@gmail.com";
+    import {
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
+    const welcome = document.getElementById("welcome");
+    const adminTools = document.getElementById("adminTools");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    if (!session) {
-      window.location.href = "login.html";
-    }
+    // Your super admin username or UID
+    const SUPER_ADMIN = "boardwalkclay1";
 
-    const email = session.user.email;
-    document.getElementById("welcome").innerText = "Welcome, " + email;
+    // -----------------------------
+    // AUTH GUARD + LOAD USER PROFILE
+    // -----------------------------
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
 
-    if (email === SUPER_ADMIN) {
-      document.getElementById("adminTools").style.display = "block";
-    }
+      // Load Firestore user profile
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
 
-    document.getElementById("logoutBtn").onclick = async () => {
-      await supabase.auth.signOut();
+      if (!snap.exists()) {
+        welcome.textContent = "Welcome!";
+        return;
+      }
+
+      const data = snap.data();
+      const name = data.name || "User";
+
+      welcome.textContent = `Welcome, ${name}`;
+
+      // Check admin
+      if (data.username === SUPER_ADMIN || data.role === "admin") {
+        adminTools.style.display = "block";
+      }
+    });
+
+    // -----------------------------
+    // LOGOUT
+    // -----------------------------
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
       window.location.href = "login.html";
     };
   </script>
