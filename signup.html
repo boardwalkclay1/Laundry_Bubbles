@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>Sign Up – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- ⭐ Firebase MUST load before any other scripts -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     :root {
       --primary: #4da6ff;
@@ -100,6 +104,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="card">
     <h1>Create an account</h1>
@@ -119,73 +124,10 @@
 
     <div class="field">
       <label for="email">Email</label>
-      <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
+      <input id="email" type="email" placeholder="you@example.com" />
     </div>
 
-    <div class="field row">
-      <div style="flex: 2;">
-        <label for="password">Password</label>
-        <input id="password" type="password" placeholder="••••••••" autocomplete="new-password" />
-      </div>
-      <div style="flex: 1;">
-        <label for="role">I am a</label>
-        <select id="role">
-          <option value="client">Client</option>
-          <option value="washer">Washer</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="phone">Phone (optional)</label>
-      <input id="phone" type="tel" placeholder="(555) 123-4567" />
-    </div>
-
-    <button class="btn btn-primary" id="signupBtn">Create account</button>
-
-    <p class="hint">
-      Already have an account?
-      <a class="link" id="loginLink">Log in</a>
-    </p>
+    <!-- Continue your form here... -->
   </div>
-
-  <script>
-    const signupBtn = document.getElementById("signupBtn");
-    const loginLink = document.getElementById("loginLink");
-    const errorEl = document.getElementById("error");
-
-    function navigateTo(page) {
-      window.location.href = page;
-    }
-
-    signupBtn.addEventListener("click", () => {
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const role = document.getElementById("role").value;
-
-      if (!name || !email || !password) {
-        errorEl.textContent = "Name, email, and password are required.";
-        return;
-      }
-
-      errorEl.textContent = "";
-
-      // Fake "signup": save to localStorage
-      const user = { name, email, role, phone };
-      localStorage.setItem("lb_user", JSON.stringify(user));
-
-      alert("Signup demo complete! In the real app, we'd send a verification email now.");
-
-      if (role === "client") {
-        navigateTo("client-dashboard.html");
-      } else {
-        navigateTo("washer-dashboard.html"); // will exist later
-      }
-    });
-
-    loginLink.addEventListener("click", () => navigateTo("login.html"));
-  </script>
 </body>
 </html>
