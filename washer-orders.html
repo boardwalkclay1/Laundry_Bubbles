@@ -34,25 +34,47 @@
   <div id="ordersContainer">Loading...</div>
 
   <script type="module">
-    import { supabase } from "./supabase.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore,
+      collection,
+      query,
+      where,
+      orderBy,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
 
-    async function loadOrders() {
-      const container = document.getElementById("ordersContainer");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("washer_id", session.user.id)
-        .order("created_at", { ascending: false });
+    const container = document.getElementById("ordersContainer");
 
+    function renderOrders(orders) {
       container.innerHTML = "";
 
+      if (orders.length === 0) {
+        container.innerHTML = "<p>No orders yet.</p>";
+        return;
+      }
+
       orders.forEach(order => {
-        const pickup = order.pickup_time
-          ? new Date(order.pickup_time).toLocaleString()
+        const pickup = order.pickupTime
+          ? new Date(order.pickupTime).toLocaleString()
           : "Not set";
 
         const div = document.createElement("div");
@@ -61,10 +83,11 @@
           <strong>Order #${order.id}</strong><br>
           <div class="meta">
             Status: ${order.status}<br>
-            Loads: ${order.loads}<br>
+            Loads: ${order.loads || 0}<br>
             Pickup: ${pickup}
           </div>
         `;
+
         div.onclick = () => {
           if (order.status === "pending_acceptance") {
             window.location.href = "washer-incoming.html";
@@ -72,25 +95,38 @@
             window.location.href = `washer-order-page.html?order_id=${order.id}`;
           }
         };
+
         container.appendChild(div);
       });
     }
 
-    // REAL-TIME UPDATES
-    supabase
-      .channel("washer-orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        payload => {
-          if (payload.new.washer_id === session.user.id) {
-            loadOrders();
-          }
-        }
-      )
-      .subscribe();
+    function subscribeToOrders(uid) {
+      const ordersRef = collection(db, "orders");
 
-    await loadOrders();
+      const q = query(
+        ordersRef,
+        where("washerId", "==", uid),
+        orderBy("createdAt", "desc")
+      );
+
+      onSnapshot(q, (snapshot) => {
+        const orders = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        renderOrders(orders);
+      });
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      subscribeToOrders(user.uid);
+    });
   </script>
 </body>
 </html>
