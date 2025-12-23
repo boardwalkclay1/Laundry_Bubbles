@@ -5,6 +5,9 @@
   <title>Login – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- ⭐ Firebase MUST load before any other scripts -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     :root {
       --primary: #4da6ff;
@@ -34,7 +37,6 @@
       position: relative;
     }
 
-    /* Grid overlay */
     .grid-overlay {
       position: fixed;
       inset: 0;
@@ -161,54 +163,13 @@
     <label>Password</label>
     <input id="password" type="password" placeholder="••••••••" />
 
-    <label>Sign in as</label>
-    <select id="role">
-      <option value="client">Client</option>
-      <option value="washer">Washer</option>
-    </select>
+    <button class="btn btn-primary" id="loginBtn">Sign In</button>
 
-    <button class="btn btn-primary" id="loginBtn">Log In</button>
-
-    <div class="footer">
-      Need an account?
-      <a class="link" id="signupLink">Sign up</a>
-    </div>
+    <p class="footer">
+      Don’t have an account?
+      <a class="link" href="/signup.html">Create one</a>
+    </p>
   </div>
-
-  <script>
-    const loginBtn = document.getElementById("loginBtn");
-    const signupLink = document.getElementById("signupLink");
-    const errorEl = document.getElementById("error");
-
-    function go(page) {
-      window.location.href = page;
-    }
-
-    loginBtn.onclick = () => {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const role = document.getElementById("role").value;
-
-      if (!email || !password) {
-        errorEl.textContent = "Please enter both email and password.";
-        return;
-      }
-
-      errorEl.textContent = "";
-
-      // Save user locally (fake auth)
-      localStorage.setItem("lb_user", JSON.stringify({ email, role }));
-
-      // Redirect based on role (NO ADMIN LOGIC)
-      if (role === "client") {
-        go("client-dashboard.html");
-      } else {
-        go("washer-dashboard.html");
-      }
-    };
-
-    signupLink.onclick = () => go("signup.html");
-  </script>
 
 </body>
 </html>
