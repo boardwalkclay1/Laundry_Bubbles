@@ -140,55 +140,89 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore,
+      doc,
+      getDoc,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let userDocRef = null;
+    let userData = null;
+
     function nav(page){ window.location.href = page; }
 
     document.getElementById("clientPaymentCard").onclick = () => nav("client-payment.html");
     document.getElementById("washerPayoutCard").onclick = () => nav("washer-payout.html");
 
-    document.getElementById("backBtn").onclick = () => {
-      const raw = localStorage.getItem("lb_user");
-      if(!raw){ nav("login.html"); return; }
-      const u = JSON.parse(raw);
-      nav(u.role === "washer" ? "washer-dashboard.html" : "client-dashboard.html");
-    };
-
-    let user = null;
-    try{
-      const raw = localStorage.getItem("lb_user");
-      if(raw){
-        user = JSON.parse(raw);
-        document.getElementById("fullName").value = user.full_name || "";
-        document.getElementById("email").value = user.email || "";
-        document.getElementById("phone").value = user.phone || "";
-        document.getElementById("roleSelect").value = user.role || "client";
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        nav("login.html");
+        return;
       }
-    }catch(e){}
 
-    document.getElementById("saveProfileBtn").onclick = () => {
-      if(!user) return;
-      user.full_name = document.getElementById("fullName").value.trim();
-      user.phone = document.getElementById("phone").value.trim();
-      localStorage.setItem("lb_user", JSON.stringify(user));
+      userDocRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userDocRef);
+
+      if (!snap.exists()) {
+        alert("User profile missing.");
+        return;
+      }
+
+      userData = snap.data();
+
+      document.getElementById("fullName").value = userData.fullName || "";
+      document.getElementById("email").value = userData.email || user.email;
+      document.getElementById("phone").value = userData.phone || "";
+      document.getElementById("roleSelect").value = userData.role || "client";
+
+      document.getElementById("backBtn").onclick = () => {
+        nav(userData.role === "washer" ? "washer-dashboard.html" : "client-dashboard.html");
+      };
+    });
+
+    document.getElementById("saveProfileBtn").onclick = async () => {
+      await updateDoc(userDocRef, {
+        fullName: document.getElementById("fullName").value.trim(),
+        phone: document.getElementById("phone").value.trim()
+      });
+
       alert("Profile updated.");
     };
 
-    document.getElementById("saveRoleBtn").onclick = () => {
-      if(!user) return;
-      const role = document.getElementById("roleSelect").value;
-      user.role = role;
-      localStorage.setItem("lb_user", JSON.stringify(user));
-      alert("Mode switched to " + role + ".");
-      nav(role === "washer" ? "washer-dashboard.html" : "client-dashboard.html");
+    document.getElementById("saveRoleBtn").onclick = async () => {
+      const newRole = document.getElementById("roleSelect").value;
+
+      await updateDoc(userDocRef, { role: newRole });
+
+      alert("Mode switched to " + newRole + ".");
+      nav(newRole === "washer" ? "washer-dashboard.html" : "client-dashboard.html");
     };
 
-    document.getElementById("logoutBtn").onclick = () => {
-      localStorage.removeItem("lb_user");
-      localStorage.removeItem("lb_selected_washer");
-      localStorage.removeItem("lb_pickup_location");
-      localStorage.removeItem("lb_pickup_history");
-      localStorage.removeItem("lb_conversations");
-      localStorage.removeItem("lb_active_conversation");
+    document.getElementById("logoutBtn").onclick = async () => {
+      await signOut(auth);
       nav("login.html");
     };
   </script>
