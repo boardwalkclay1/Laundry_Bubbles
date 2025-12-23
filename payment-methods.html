@@ -6,37 +6,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    body {
+    :root {
+      --primary:#d96e30;
+      --accent:#f4c542;
+      --text:#5a3e2b;
+      --card-bg:#fff4d9;
+      --muted:#8b6a4a;
+      --danger:#d6293e;
+      --success:#1f9b5c;
+      --warning:#e88d1a;
+    }
+    * {
+      box-sizing:border-box;
       margin:0;
-      font-family:Arial,sans-serif;
+      padding:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    body {
       background:linear-gradient(135deg,#d96e30,#f4c542);
       min-height:100vh;
       padding:20px;
-      color:#5a3e2b;
+      color:var(--text);
     }
-    h1 { text-align:center; margin-bottom:20px; }
+    h1 {
+      text-align:center;
+      margin-bottom:16px;
+      font-size:24px;
+    }
+    .page-sub {
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:20px;
+      max-width:480px;
+      margin-left:auto;
+      margin-right:auto;
+    }
     .card {
-      background:#fff4d9;
+      background:var(--card-bg);
       padding:20px;
       border-radius:16px;
       box-shadow:0 6px 16px rgba(0,0,0,0.25);
       max-width:520px;
-      margin:0 auto;
+      margin:0 auto 16px auto;
     }
-    label { font-weight:bold; display:block; margin-top:10px; }
+    .card h2 {
+      font-size:18px;
+      margin-bottom:6px;
+    }
+    .card p {
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+    label {
+      font-weight:bold;
+      display:block;
+      margin-top:10px;
+      font-size:14px;
+    }
     select {
       width:100%;
       padding:12px;
       margin-top:6px;
       border-radius:10px;
-      border:2px solid #d96e30;
+      border:2px solid var(--primary);
       background:white;
+      font-size:14px;
+      color:var(--text);
     }
     .btn {
       display:block;
       width:100%;
       padding:14px;
-      background:#d96e30;
+      background:var(--primary);
       color:white;
       text-align:center;
       border-radius:10px;
@@ -45,20 +88,124 @@
       margin-top:14px;
       border:none;
       cursor:pointer;
+      font-size:15px;
+      transition:transform 0.08s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+      box-shadow:0 8px 18px rgba(0,0,0,0.25);
     }
-    .secondary {
-      background:#f4c542;
-      color:#5a3e2b;
-      border:2px solid #d96e30;
+    .btn.secondary {
+      background:var(--accent);
+      color:var(--text);
+      border:2px solid var(--primary);
+      box-shadow:0 6px 14px rgba(0,0,0,0.15);
+    }
+    .btn:active {
+      transform:scale(0.97);
+      box-shadow:none;
+    }
+    .btn[disabled] {
+      opacity:0.55;
+      cursor:default;
+      box-shadow:none;
+      transform:none;
+    }
+    .row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:8px;
+    }
+    .row .btn {
+      flex:1;
+      min-width:140px;
+    }
+    .status-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      padding:5px 9px;
+      border-radius:999px;
+      background:#ffe9be;
+      border:1px solid rgba(0,0,0,0.08);
+      margin-top:8px;
+    }
+    .status-dot {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+    }
+    .status-dot.pending { background:var(--warning); }
+    .status-dot.verified { background:var(--success); }
+    .status-dot.restricted { background:var(--danger); }
+    .status-label {
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      font-weight:700;
+    }
+    .status-text {
+      font-size:11px;
+      color:var(--muted);
+    }
+    .message {
+      font-size:12px;
+      margin-top:8px;
+    }
+    .message.error { color:var(--danger); }
+    .message.success { color:var(--success); }
+    .hint {
+      font-size:11px;
+      color:var(--muted);
+      margin-top:4px;
     }
   </style>
 </head>
 
 <body>
   <h1>Payment Methods</h1>
+  <p class="page-sub">
+    Choose your preferred way to get paid and connect secure payouts through Stripe. We never store card or bank numbers
+    in this app.
+  </p>
 
+  <!-- Stripe payouts / Connect -->
   <div class="card">
-    <label>Preferred Payment Method</label>
+    <h2>Stripe payouts</h2>
+    <p>
+      Stripe securely handles card details, bank accounts, and identity checks. We only store a reference to your Stripe
+      account and simple preferences.
+    </p>
+
+    <div id="stripeStatusPill" class="status-pill" style="display:none;">
+      <span id="stripeStatusDot" class="status-dot"></span>
+      <span id="stripeStatusLabel" class="status-label"></span>
+      <span id="stripeStatusText" class="status-text"></span>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="stripeOnboardBtn">
+        Set up payouts with Stripe
+      </button>
+      <button class="btn secondary" id="stripeDashboardBtn" disabled>
+        Open Stripe dashboard
+      </button>
+    </div>
+
+    <p class="hint">
+      You’ll be redirected to Stripe to complete onboarding or update payout details, then sent back here.
+    </p>
+
+    <div id="stripeMessage" class="message error" style="display:none;"></div>
+  </div>
+
+  <!-- Preferred payment method (simple UI) -->
+  <div class="card">
+    <h2>Preferred payment method</h2>
+    <p>
+      This is how you prefer to receive money from Laundry Bubbles. It doesn’t change how Stripe sends funds to your
+      bank, but it helps us and your customers understand your preference.
+    </p>
+
+    <label for="paymentMethod">Preferred payment method</label>
     <select id="paymentMethod">
       <option value="cash">Cash</option>
       <option value="cashapp">Cash App</option>
@@ -67,51 +214,196 @@
       <option value="zelle">Zelle</option>
     </select>
 
-    <button class="btn" onclick="savePayment()">Save Payment Method</button>
+    <button class="btn" id="savePaymentBtn">Save payment method</button>
+    <div id="paymentMessage" class="message" style="display:none;"></div>
+
     <a class="btn secondary" href="settings.html">Back to Settings</a>
   </div>
 
-  <script type="module">
-    import { supabase } from "./supabase.js";
+  <script>
+    /*
+      FRONTEND–BACKEND CONTRACT
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+      You connect these to the Stripe API you already have:
 
-    async function loadPayment() {
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("payment_method")
-        .eq("id", session.user.id)
-        .single();
+      1) GET  /api/payment-method
+         -> { preferredMethod: "cash" | "cashapp" | "venmo" | "paypal" | "zelle", stripeStatus: "not_created" | "pending" | "verified" | "restricted" }
 
-      if (error) {
-        console.error("Load payment error:", error);
+      2) POST /api/payment-method
+         body: { preferredMethod: string }
+         -> { preferredMethod, stripeStatus }
+
+      3) POST /api/stripe/create-onboarding-link
+         -> { url: "https://connect.stripe.com/..." }
+
+      4) POST /api/stripe/create-dashboard-link
+         -> { url: "https://connect.stripe.com/..." }
+
+      All routes should use your existing auth (cookies/session) to know which user’s Stripe account to work with.
+    */
+
+    const stripeStatusPill = document.getElementById("stripeStatusPill");
+    const stripeStatusDot = document.getElementById("stripeStatusDot");
+    const stripeStatusLabel = document.getElementById("stripeStatusLabel");
+    const stripeStatusText = document.getElementById("stripeStatusText");
+    const stripeOnboardBtn = document.getElementById("stripeOnboardBtn");
+    const stripeDashboardBtn = document.getElementById("stripeDashboardBtn");
+    const stripeMessageEl = document.getElementById("stripeMessage");
+
+    const paymentSelect = document.getElementById("paymentMethod");
+    const savePaymentBtn = document.getElementById("savePaymentBtn");
+    const paymentMessageEl = document.getElementById("paymentMessage");
+
+    function setStripeStatus(status){
+      // status: "not_created" | "pending" | "verified" | "restricted"
+      if(!status || status === "not_created"){
+        stripeStatusPill.style.display = "none";
+        stripeDashboardBtn.disabled = true;
+        stripeOnboardBtn.disabled = false;
         return;
       }
 
-      if (profile.payment_method) {
-        document.getElementById("paymentMethod").value = profile.payment_method;
+      stripeStatusPill.style.display = "inline-flex";
+
+      stripeStatusDot.className = "status-dot";
+      let label = "";
+      let text = "";
+
+      if(status === "pending"){
+        stripeStatusDot.classList.add("pending");
+        label = "PENDING";
+        text = "Stripe is still reviewing or needs more information from you.";
+      } else if(status === "verified"){
+        stripeStatusDot.classList.add("verified");
+        label = "ACTIVE";
+        text = "Your Stripe payouts are active.";
+      } else if(status === "restricted"){
+        stripeStatusDot.classList.add("restricted");
+        label = "ACTION NEEDED";
+        text = "Stripe needs more information to keep payouts running.";
+      }
+
+      stripeStatusLabel.textContent = label;
+      stripeStatusText.textContent = text;
+      stripeDashboardBtn.disabled = false;
+      stripeOnboardBtn.disabled = false;
+    }
+
+    function showStripeError(message){
+      stripeMessageEl.style.display = "block";
+      stripeMessageEl.textContent = message || "Something went wrong with Stripe. Please try again.";
+    }
+
+    function clearStripeError(){
+      stripeMessageEl.style.display = "none";
+      stripeMessageEl.textContent = "";
+    }
+
+    function showPaymentMessage(message, isError){
+      paymentMessageEl.style.display = "block";
+      paymentMessageEl.textContent = message;
+      paymentMessageEl.className = "message " + (isError ? "error" : "success");
+    }
+
+    // Load initial data
+    async function loadPaymentData(){
+      try {
+        const res = await fetch("/api/payment-method", {
+          method:"GET",
+          credentials:"include"
+        });
+        if(!res.ok) throw new Error("Failed to load payment method.");
+        const data = await res.json();
+
+        if(data.preferredMethod){
+          paymentSelect.value = data.preferredMethod;
+        }
+        setStripeStatus(data.stripeStatus);
+      } catch (err) {
+        console.error(err);
+        showPaymentMessage("Unable to load your current payment settings. You can still try saving a new preference.", true);
       }
     }
 
-    window.savePayment = async function () {
-      const method = document.getElementById("paymentMethod").value;
+    // Save preferred payment method
+    savePaymentBtn.onclick = async () => {
+      paymentMessageEl.style.display = "none";
+      const method = paymentSelect.value;
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ payment_method: method })
-        .eq("id", session.user.id);
+      savePaymentBtn.disabled = true;
+      savePaymentBtn.textContent = "Saving…";
 
-      if (error) {
-        console.error("Save payment error:", error);
-        alert("Error saving payment method.");
-        return;
+      try {
+        const res = await fetch("/api/payment-method", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          credentials:"include",
+          body: JSON.stringify({ preferredMethod: method })
+        });
+        if(!res.ok) throw new Error("Failed to save payment method.");
+        const data = await res.json();
+
+        if(data.stripeStatus){
+          setStripeStatus(data.stripeStatus);
+        }
+        showPaymentMessage("Payment method updated!", false);
+      } catch (err) {
+        console.error(err);
+        showPaymentMessage("Error saving payment method. Please try again.", true);
+      } finally {
+        savePaymentBtn.disabled = false;
+        savePaymentBtn.textContent = "Save payment method";
       }
-
-      alert("Payment method updated!");
     };
 
-    await loadPayment();
+    // Stripe onboarding
+    stripeOnboardBtn.onclick = async () => {
+      clearStripeError();
+      stripeOnboardBtn.disabled = true;
+      stripeOnboardBtn.textContent = "Connecting to Stripe…";
+
+      try {
+        const res = await fetch("/api/stripe/create-onboarding-link", {
+          method:"POST",
+          credentials:"include"
+        });
+        if(!res.ok) throw new Error("Failed to create onboarding link.");
+        const data = await res.json();
+        if(!data.url) throw new Error("No onboarding URL returned from server.");
+        window.location.href = data.url;
+      } catch (err) {
+        console.error(err);
+        showStripeError("We couldn’t start Stripe onboarding. Please try again.");
+        stripeOnboardBtn.disabled = false;
+        stripeOnboardBtn.textContent = "Set up payouts with Stripe";
+      }
+    };
+
+    // Stripe dashboard
+    stripeDashboardBtn.onclick = async () => {
+      clearStripeError();
+      stripeDashboardBtn.disabled = true;
+      stripeDashboardBtn.textContent = "Opening dashboard…";
+
+      try {
+        const res = await fetch("/api/stripe/create-dashboard-link", {
+          method:"POST",
+          credentials:"include"
+        });
+        if(!res.ok) throw new Error("Failed to create dashboard link.");
+        const data = await res.json();
+        if(!data.url) throw new Error("No dashboard URL returned from server.");
+        window.location.href = data.url;
+      } catch (err) {
+        console.error(err);
+        showStripeError("We couldn’t open your Stripe dashboard. Please try again.");
+        stripeDashboardBtn.disabled = false;
+        stripeDashboardBtn.textContent = "Open Stripe dashboard";
+      }
+    };
+
+    // Kickoff
+    loadPaymentData();
   </script>
 </body>
 </html>
