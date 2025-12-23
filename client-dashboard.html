@@ -5,7 +5,7 @@
   <title>Client Dashboard – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- ⭐ Firebase MUST load before any other scripts -->
+  <!-- Load Firebase -->
   <script type="module" src="/firebase.js"></script>
 
   <style>
@@ -148,18 +148,69 @@
 
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB02c_eleXuhHWdSMJzqk9mESbXn_PT2zc"></script>
 
-  <script>
+  <script type="module">
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    import {
+      collection,
+      query,
+      where,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
     function nav(page){ window.location.href = page; }
 
-    document.getElementById("avatarInitial").onclick = () => nav("settings.html");
+    const avatar = document.getElementById("avatarInitial");
+    const greeting = document.getElementById("greeting");
 
-    const washers = [
-      { id:"w1", name:"BeltLine Bubbles", lat:33.7550, lng:-84.39 },
-      { id:"w2", name:"Decatur Fresh Fold", lat:33.774, lng:-84.295 },
-      { id:"w3", name:"Midtown Spin & Smile", lat:33.78, lng:-84.38 }
-    ];
+    let currentUser = null;
 
-    function initMiniMap() {
+    // -----------------------------
+    // AUTH GUARD + LOAD USER PROFILE
+    // -----------------------------
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+
+      // Load Firestore profile
+      const snap = await getDocs(
+        query(collection(db, "users"), where("uid", "==", user.uid))
+      );
+
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        greeting.textContent = `Welcome back, ${data.name || "Client"}`;
+        avatar.textContent = (data.name || "U").charAt(0).toUpperCase();
+      }
+    });
+
+    // -----------------------------
+    // LOAD REAL WASHERS FROM FIRESTORE
+    // -----------------------------
+    async function loadWashers() {
+      const q = query(
+        collection(db, "users"),
+        where("role", "==", "washer"),
+        where("verification_status", "==", "approved"),
+        where("available", "==", true)
+      );
+
+      const snap = await getDocs(q);
+      return snap.docs.map(doc => doc.data());
+    }
+
+    // -----------------------------
+    // MINI MAP
+    // -----------------------------
+    async function initMiniMap() {
+      const washers = await loadWashers();
+
       const defaultPos = { lat:33.7490, lng:-84.3880 };
 
       const map = new google.maps.Map(document.getElementById("miniMap"), {
@@ -174,11 +225,13 @@
       });
 
       washers.forEach(w => {
-        new google.maps.Marker({
-          position:{lat:w.lat,lng:w.lng},
-          map,
-          icon:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-        });
+        if (w.lat && w.lng) {
+          new google.maps.Marker({
+            position:{lat:w.lat, lng:w.lng},
+            map,
+            icon:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+          });
+        }
       });
 
       if (navigator.geolocation) {
