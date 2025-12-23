@@ -7,9 +7,17 @@
 
   <style>
     :root {
-      --primary:#4da6ff; --accent:#7a5cff; --text:#f9fbff; --muted:#9aa3c7;
+      --primary:#4da6ff;
+      --accent:#7a5cff;
+      --text:#f9fbff;
+      --muted:#9aa3c7;
     }
-    * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui,sans-serif; }
+    * {
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:system-ui,sans-serif;
+    }
 
     body {
       background:#030715;
@@ -28,11 +36,14 @@
     }
 
     .back {
-      width:36px; height:36px;
+      width:36px;
+      height:36px;
       border-radius:50%;
       background:rgba(255,255,255,0.08);
       border:1px solid rgba(255,255,255,0.15);
-      display:flex; align-items:center; justify-content:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       cursor:pointer;
       font-size:18px;
     }
@@ -42,6 +53,7 @@
       border-radius:18px;
       border:1px solid rgba(255,255,255,0.15);
       overflow:hidden;
+      min-height:260px;
     }
 
     .address-box {
@@ -63,8 +75,12 @@
       font-weight:600;
     }
 
+    .footer {
+      margin-top:10px;
+    }
+
     button {
-      margin-top:14px;
+      margin-top:10px;
       width:100%;
       padding:14px;
       border-radius:999px;
@@ -74,6 +90,33 @@
       font-size:16px;
       font-weight:600;
       cursor:pointer;
+      box-shadow:0 10px 24px rgba(0,0,0,0.5);
+      transition:transform 0.08s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:active {
+      transform:scale(0.97);
+      box-shadow:none;
+    }
+
+    button[disabled] {
+      opacity:0.5;
+      cursor:default;
+      box-shadow:none;
+      transform:none;
+    }
+
+    .message {
+      margin-top:8px;
+      font-size:12px;
+    }
+    .message.error { color:#ff6b81; }
+    .message.success { color:#4dffb3; }
+
+    .hint {
+      font-size:11px;
+      color:var(--muted);
+      margin-top:4px;
     }
   </style>
 </head>
@@ -87,24 +130,63 @@
   <div id="map"></div>
 
   <div class="address-box">
-    <div class="address-label">Selected Address</div>
-    <div class="address-value" id="addressText">Move the pin to choose a location…</div>
+    <div class="address-label">Selected address</div>
+    <div class="address-value" id="addressText">
+      Move the pin or use your location to choose a pickup spot…
+    </div>
   </div>
 
-  <button onclick="saveLocation()">Confirm Location</button>
+  <div class="footer">
+    <button id="confirmBtn" onclick="saveLocation()" disabled>Confirm location</button>
+    <div id="statusMessage" class="message"></div>
+    <p class="hint">
+      This location will be saved to your account for this pickup. You can always adjust it before confirming your order.
+    </p>
+  </div>
 
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB02c_eleXuhHWdSMJzqk9mESbXn_PT2zc&libraries=places"></script>
+  <!-- TIP: in production, load this URL with your key injected from env/server, not hard-coded -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
 
   <script>
+    /*
+      FRONTEND–BACKEND CONTRACT
+
+      You hook these to your real backend (which can use Firebase, SQL, etc.):
+
+      1) GET  /api/pickup-location
+         -> { lat:number, lng:number, address:string }  // last saved pickup location for this user
+         or 404/empty body if none
+
+      2) POST /api/pickup-location
+         body: { lat:number, lng:number, address:string }
+         -> { lat, lng, address }
+
+      Backend identifies the user from your existing auth (cookies/session/token).
+      No lat/lng in localStorage anymore; everything lives in your backend.
+    */
+
     let map, marker, geocoder;
     let selectedLat = null;
     let selectedLng = null;
     let selectedAddress = "";
 
+    const addressEl = document.getElementById("addressText");
+    const confirmBtn = document.getElementById("confirmBtn");
+    const statusMessageEl = document.getElementById("statusMessage");
+
+    function setStatus(message, type){
+      statusMessageEl.textContent = message || "";
+      statusMessageEl.className = "message" + (type ? " " + type : "");
+    }
+
+    function enableConfirm(enabled){
+      confirmBtn.disabled = !enabled;
+    }
+
     function initMap() {
       geocoder = new google.maps.Geocoder();
 
-      const defaultPos = { lat: 33.7490, lng: -84.3880 };
+      const defaultPos = { lat: 33.7490, lng: -84.3880 }; // Atlanta baseline
 
       map = new google.maps.Map(document.getElementById("map"), {
         center: defaultPos,
@@ -130,33 +212,98 @@
         reverseGeocode(selectedLat, selectedLng);
       });
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const userPos = {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude
-            };
-            map.setCenter(userPos);
-            marker.setPosition(userPos);
-            selectedLat = userPos.lat;
-            selectedLng = userPos.lng;
-            reverseGeocode(selectedLat, selectedLng);
-          }
-        );
-      }
-    }
-
-    function reverseGeocode(lat, lng) {
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === "OK" && results[0]) {
-          selectedAddress = results[0].formatted_address;
-          document.getElementById("addressText").textContent = selectedAddress;
+      // First, try to load any saved location from backend
+      loadSavedLocation().then((loaded) => {
+        if (!loaded && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const userPos = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+              };
+              map.setCenter(userPos);
+              marker.setPosition(userPos);
+              selectedLat = userPos.lat;
+              selectedLng = userPos.lng;
+              reverseGeocode(selectedLat, selectedLng);
+            },
+            () => {
+              // Geolocation denied – keep default center
+              setStatus("We couldn't access your location. You can move the pin manually.", "error");
+            }
+          );
+        }
+      }).catch(() => {
+        // If backend fails, user can still choose a spot manually
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const userPos = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+              };
+              map.setCenter(userPos);
+              marker.setPosition(userPos);
+              selectedLat = userPos.lat;
+              selectedLng = userPos.lng;
+              reverseGeocode(selectedLat, selectedLng);
+            }
+          );
         }
       });
     }
 
-    function saveLocation() {
+    async function loadSavedLocation(){
+      try{
+        const res = await fetch("/api/pickup-location", {
+          method:"GET",
+          credentials:"include"
+        });
+        if(res.status === 404){
+          return false;
+        }
+        if(!res.ok){
+          throw new Error("Failed to load saved location.");
+        }
+        const data = await res.json();
+        if(data && data.lat && data.lng && data.address){
+          const pos = { lat: data.lat, lng: data.lng };
+          map.setCenter(pos);
+          marker.setPosition(pos);
+          selectedLat = data.lat;
+          selectedLng = data.lng;
+          selectedAddress = data.address;
+          addressEl.textContent = selectedAddress;
+          enableConfirm(true);
+          return true;
+        }
+        return false;
+      }catch(err){
+        console.error(err);
+        setStatus("We couldn't load your last pickup location. You can pick a new one.", "error");
+        return false;
+      }
+    }
+
+    function reverseGeocode(lat, lng) {
+      enableConfirm(false);
+      addressEl.textContent = "Finding address…";
+
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          selectedAddress = results[0].formatted_address;
+          addressEl.textContent = selectedAddress;
+          enableConfirm(true);
+          setStatus("", "");
+        } else {
+          selectedAddress = "";
+          addressEl.textContent = "We couldn't find an address here. Try moving the pin slightly.";
+          setStatus("Unable to fetch address for this location.", "error");
+        }
+      });
+    }
+
+    async function saveLocation() {
       if (!selectedLat || !selectedLng || !selectedAddress) {
         alert("Please choose a location first.");
         return;
@@ -168,10 +315,33 @@
         address: selectedAddress
       };
 
-      localStorage.setItem("lb_pickup_location", JSON.stringify(loc));
-      window.location.href = "request-pickup.html";
+      enableConfirm(false);
+      setStatus("Saving location…", "");
+
+      try{
+        const res = await fetch("/api/pickup-location", {
+          method:"POST",
+          headers: { "Content-Type":"application/json" },
+          credentials:"include",
+          body: JSON.stringify(loc)
+        });
+        if(!res.ok){
+          throw new Error("Failed to save location.");
+        }
+        await res.json();
+        setStatus("Pickup location saved.", "success");
+        // Give a tiny pause so the user sees it's saved
+        setTimeout(() => {
+          window.location.href = "request-pickup.html";
+        }, 500);
+      }catch(err){
+        console.error(err);
+        setStatus("We couldn't save your location. Please try again.", "error");
+        enableConfirm(true);
+      }
     }
 
+    window.saveLocation = saveLocation;
     window.onload = initMap;
   </script>
 </body>
