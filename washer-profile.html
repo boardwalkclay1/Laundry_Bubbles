@@ -184,38 +184,73 @@
     </div>
   </main>
 
-  <script>
-    function nav(page) { window.location.href = page; }
+  <!-- FIREBASE VERSION -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    document.getElementById("backBtn").onclick = () => nav("client-map.html");
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
 
-    let washer = null;
-    try {
-      const raw = localStorage.getItem("lb_selected_washer");
-      if (raw) washer = JSON.parse(raw);
-    } catch (e) {}
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    if (!washer) {
-      document.getElementById("profileCard").innerHTML =
-        "<p class='muted'>No washer selected. Go back to the map and choose one.</p>";
-    } else {
-      document.getElementById("washerAvatar").textContent = washer.name.charAt(0);
-      document.getElementById("washerName").textContent = washer.name;
+    const params = new URLSearchParams(window.location.search);
+    const washerId = params.get("id");
 
-      const distance = washer.distance_mi
-        ? washer.distance_mi.toFixed(1) + " mi away"
-        : (washer.distance || "") + " away";
+    const backBtn = document.getElementById("backBtn");
+    backBtn.onclick = () => window.location.href = "client-map.html";
 
-      document.getElementById("washerMeta").textContent =
-        `${distance} · ${washer.rating || "5.0"}★ · ${washer.jobs || 0} jobs`;
+    const avatar = document.getElementById("washerAvatar");
+    const nameEl = document.getElementById("washerName");
+    const metaEl = document.getElementById("washerMeta");
+    const priceEl = document.getElementById("washerPrice");
+    const tagsEl = document.getElementById("washerTags");
+    const bioEl = document.getElementById("washerBio");
 
-      document.getElementById("washerPrice").textContent =
-        washer.price_per_load ? `$${washer.price_per_load} per load` : "Pricing available on request.";
+    async function loadWasher() {
+      if (!washerId) {
+        document.getElementById("profileCard").innerHTML =
+          "<p class='muted'>No washer selected.</p>";
+        return;
+      }
 
-      const tagsEl = document.getElementById("washerTags");
+      const ref = doc(db, "washers", washerId);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        document.getElementById("profileCard").innerHTML =
+          "<p class='muted'>Washer not found.</p>";
+        return;
+      }
+
+      const w = snap.data();
+
+      avatar.textContent = w.name?.charAt(0) || "W";
+      nameEl.textContent = w.name || "Washer";
+
+      const distance = w.distance_mi
+        ? w.distance_mi.toFixed(1) + " mi away"
+        : "";
+
+      metaEl.textContent =
+        `${distance} · ${w.rating || "5.0"}★ · ${w.jobs || 0} jobs`;
+
+      priceEl.textContent =
+        w.price_per_load ? `$${w.price_per_load} per load` : "Pricing available on request.";
+
       tagsEl.innerHTML = "";
-      if (Array.isArray(washer.tags)) {
-        washer.tags.forEach(t => {
+      if (Array.isArray(w.tags)) {
+        w.tags.forEach(t => {
           const span = document.createElement("span");
           span.className = "tag";
           span.textContent = t;
@@ -225,14 +260,19 @@
         tagsEl.innerHTML = "<span class='tag'>Standard wash & fold</span>";
       }
 
-      if (washer.bio) {
-        document.getElementById("washerBio").textContent = washer.bio;
-      }
+      if (w.bio) bioEl.textContent = w.bio;
     }
 
-    document.getElementById("requestBtn").onclick = () => {
-      nav("request-pickup.html");
-    };
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      loadWasher();
+    });
+
+    document.getElementById("requestBtn").onclick = () =>
+      window.location.href = "request-pickup.html?washerId=" + washerId;
   </script>
 </body>
 </html>
