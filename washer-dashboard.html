@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>Washer Dashboard – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- ⭐ Firebase MUST load before any other scripts -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     :root{--primary:#4da6ff;--accent:#7a5cff;--text:#f9fbff;--muted:#9aa3c7;--card:rgba(255,255,255,0.05);}
     *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif;}
@@ -49,6 +53,7 @@
     footer{margin-top:24px;text-align:center;font-size:12px;color:var(--muted);}
   </style>
 </head>
+
 <body>
   <div class="grid-overlay"></div>
 
@@ -105,10 +110,13 @@
         if(user.email){
           const name = user.full_name || user.email.split("@")[0];
           document.getElementById("greeting").textContent = "Welcome back, " + name;
-          avatar.textContent = name.charAt(0).toUpperCase();
+          document.getElementById("avatarInitial").textContent = name[0].toUpperCase();
         }
       }
-    }catch(e){}
+    }catch(e){
+      console.error(e);
+    }
   </script>
+
 </body>
 </html>
