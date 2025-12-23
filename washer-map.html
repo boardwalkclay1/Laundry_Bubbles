@@ -131,23 +131,47 @@
     </div>
   </div>
 
+  <!-- Google Maps -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB02c_eleXuhHWdSMJzqk9mESbXn_PT2zc"></script>
 
-  <script>
-    function nav(page){ window.location.href = page; }
+  <!-- Firebase + Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     function openDirections(lat,lng){
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,"_blank");
     }
 
-    // Load pickup requests from localStorage
-    const pickupRequests = JSON.parse(localStorage.getItem("lb_pickup_history") || "[]");
-
     let map;
+    let pickupRequests = [];
     const markersById = {};
     let activeId = null;
+    let mapInitialized = false;
 
-    function initMap(){
+    function initMapIfNeeded(){
+      if (mapInitialized) return;
       const defaultPos = { lat:33.7490, lng:-84.3880 };
 
       map = new google.maps.Map(document.getElementById("map"),{
@@ -160,7 +184,19 @@
         ]
       });
 
-      pickupRequests.forEach((req,i)=>{
+      mapInitialized = true;
+    }
+
+    function clearMarkers(){
+      Object.values(markersById).forEach(m => m.setMap(null));
+      Object.keys(markersById).forEach(k => delete markersById[k]);
+    }
+
+    function rebuildMarkers(){
+      if (!mapInitialized) initMapIfNeeded();
+      clearMarkers();
+
+      pickupRequests.forEach((req, i) => {
         if(!req.pickupLat || !req.pickupLng) return;
 
         const marker = new google.maps.Marker({
@@ -169,45 +205,39 @@
           icon:"https://maps.google.com/mapfiles/ms/icons/green-dot.png"
         });
 
-        markersById[i] = marker;
+        markersById[req.id] = marker;
 
-        marker.addListener("click",()=>focusRequest(i,true));
+        marker.addListener("click",()=>focusRequest(req.id,true));
       });
-
-      buildRequestList();
-    }
-
-    function ensureConversation(clientId, washerId, name){
-      const convId = `conversation_${clientId}_${washerId}`;
-      const raw = localStorage.getItem("lb_conversations");
-      const list = raw ? JSON.parse(raw) : [];
-      let conv = list.find(c=>c.id===convId);
-      if(!conv){
-        conv = { id:convId, clientId, washerId, otherName:name, messages:[] };
-        list.push(conv);
-        localStorage.setItem("lb_conversations",JSON.stringify(list));
-      }
-      localStorage.setItem("lb_active_conversation",convId);
-      return convId;
     }
 
     function buildRequestList(){
       const listEl = document.getElementById("requestList");
       listEl.innerHTML = "";
 
-      pickupRequests.forEach((req,i)=>{
+      if (pickupRequests.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "request-card";
+        empty.innerHTML = "<div class='request-title'>No pickup requests nearby.</div>";
+        listEl.appendChild(empty);
+        return;
+      }
+
+      pickupRequests.forEach((req) => {
         const card = document.createElement("div");
         card.className = "request-card";
-        card.dataset.id = i;
+        card.dataset.id = req.id;
+
+        const clientName = req.clientName || "Client";
 
         card.innerHTML = `
-          <div class="request-title">${req.washer?.name || "Client"}</div>
-          <div class="request-meta">${req.pickupAddress}</div>
-          <div class="request-meta">Window: ${req.pickupWindow}</div>
+          <div class="request-title">${clientName}</div>
+          <div class="request-meta">${req.pickupAddress || "Address unavailable"}</div>
+          <div class="request-meta">Window: ${req.pickupWindow || "Flexible"}</div>
           <div class="request-notes">${req.notes || ""}</div>
           <div class="btn-row">
-            <button class="btn btn-primary" data-role="message" data-id="${i}">Message</button>
-            <button class="btn btn-secondary" data-role="directions" data-id="${i}">Directions</button>
+            <button class="btn btn-primary" data-role="message" data-id="${req.id}">Message</button>
+            <button class="btn btn-secondary" data-role="directions" data-id="${req.id}">Directions</button>
           </div>
         `;
 
@@ -216,20 +246,26 @@
           const id = e.target.getAttribute("data-id");
 
           if(role){
-            const r = pickupRequests[id];
+            const r = pickupRequests.find(pr => pr.id === id);
+            if (!r) return;
+
             if(role==="message"){
-              const washer = JSON.parse(localStorage.getItem("lb_user"));
-              ensureConversation(r.clientId || "client", washer.id, r.washer?.name || "Client");
-              nav("inbox.html");
+              // Hand off to inbox with query params; inbox.html will handle Firestore chat
+              const params = new URLSearchParams({
+                clientId: r.clientId || "",
+                requestId: r.id
+              });
+              window.location.href = "inbox.html?" + params.toString();
             }
-            if(role==="directions"){
+
+            if(role==="directions" && r.pickupLat && r.pickupLng){
               openDirections(r.pickupLat, r.pickupLng);
             }
             e.stopPropagation();
             return;
           }
 
-          focusRequest(i,true);
+          focusRequest(req.id,true);
         });
 
         listEl.appendChild(card);
@@ -246,14 +282,66 @@
         }
       });
 
-      const req = pickupRequests[id];
-      if(req && centerMap && markersById[id]){
+      const req = pickupRequests.find(r => r.id === id);
+      const marker = markersById[id];
+      if(req && centerMap && marker && map){
         map.panTo({lat:req.pickupLat,lng:req.pickupLng});
         map.setZoom(14);
       }
     }
 
-    window.onload = initMap;
+    function subscribeToPickupRequests(currentWasherId){
+      const ref = collection(db, "pickup_requests");
+
+      // For now: show all "requested" jobs.
+      // Later you can filter by distance or washerId.
+      const q = query(
+        ref,
+        where("status", "==", "requested")
+      );
+
+      onSnapshot(q, (snapshot) => {
+        pickupRequests = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            pickupLat: data.pickupLat,
+            pickupLng: data.pickupLng,
+            pickupAddress: data.pickupAddress,
+            pickupWindow: data.pickupWindow,
+            notes: data.notes,
+            clientId: data.clientId,
+            clientName: data.clientName
+          };
+        });
+
+        initMapIfNeeded();
+        rebuildMarkers();
+        buildRequestList();
+      });
+    }
+
+    // Auth gate
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      // You can add a role check here if needed (e.g., ensure user is washer)
+      subscribeToPickupRequests(user.uid);
+      // Init map once page + auth ready
+      if (typeof google !== "undefined") {
+        initMapIfNeeded();
+      }
+    });
+
+    // Fallback if maps loads after script
+    window.onload = () => {
+      if (typeof google !== "undefined") {
+        initMapIfNeeded();
+      }
+    };
   </script>
 </body>
 </html>
