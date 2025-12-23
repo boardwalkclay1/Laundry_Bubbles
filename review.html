@@ -33,6 +33,7 @@
             border: 2px solid #D96E30;
             margin-bottom: 20px;
             height: 140px;
+            font-size: 1rem;
         }
 
         .btn {
@@ -46,6 +47,7 @@
             color: #5A3E2B;
             text-decoration: none;
             border: 2px solid #D96E30;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -54,9 +56,97 @@
     <header>Leave a Review</header>
 
     <div class="container">
-        <textarea placeholder="Write your review here..."></textarea>
+        <textarea id="reviewText" placeholder="Write your review here..."></textarea>
 
-        <a href="client.html" class="btn">Submit Review</a>
+        <button class="btn" id="submitReviewBtn">Submit Review</button>
     </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore,
+            doc,
+            getDoc,
+            addDoc,
+            updateDoc,
+            collection
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // -----------------------------
+        // Firebase Config
+        // -----------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+            authDomain: "launrdy-bubbles.firebaseapp.com",
+            projectId: "launrdy-bubbles",
+            storageBucket: "launrdy-bubbles.firebasestorage.app",
+            messagingSenderId: "625079841514",
+            appId: "1:625079841514:web:472b2721f4acb836111d93",
+            measurementId: "G-QT16Z65J1E"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const orderId = new URLSearchParams(window.location.search).get("orderId");
+        let orderData = null;
+
+        async function loadOrder() {
+            const ref = doc(db, "orders", orderId);
+            const snap = await getDoc(ref);
+
+            if (!snap.exists()) {
+                alert("Order not found.");
+                window.location.href = "client-dashboard.html";
+                return;
+            }
+
+            orderData = snap.data();
+        }
+
+        async function submitReview(uid) {
+            const text = document.getElementById("reviewText").value.trim();
+
+            if (!text) {
+                alert("Please write a review before submitting.");
+                return;
+            }
+
+            // Save review
+            await addDoc(collection(db, "reviews"), {
+                orderId,
+                washerId: orderData.washerId,
+                clientId: uid,
+                review: text,
+                createdAt: Date.now()
+            });
+
+            // Mark order as reviewed
+            await updateDoc(doc(db, "orders", orderId), {
+                reviewed: true
+            });
+
+            alert("Thank you for your review!");
+            window.location.href = "client-dashboard.html";
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            await loadOrder();
+
+            document.getElementById("submitReviewBtn").onclick = () => {
+                submitReview(user.uid);
+            };
+        });
+    </script>
 </body>
 </html>
