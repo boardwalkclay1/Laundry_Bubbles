@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>Payment method – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Load Firebase -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     :root { --primary:#4da6ff;--accent:#7a5cff;--text:#f9fbff;--muted:#9aa3c7;--card:rgba(255,255,255,0.05); }
     *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif;}
@@ -57,6 +61,7 @@
     .hint{font-size:11px;color:var(--muted);margin-top:6px;}
   </style>
 </head>
+
 <body>
   <header>
     <div class="back" onclick="window.location.href='settings.html'">←</div>
@@ -109,22 +114,52 @@
     <button class="btn btn-primary" id="savePaymentBtn">Save payment settings</button>
   </section>
 
-  <script>
-    function loadClientPayment(){
-      const raw = localStorage.getItem("lb_client_payment");
-      if(!raw) return;
-      const p = JSON.parse(raw);
+  <script type="module">
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-      document.getElementById("cardBrand").value = p.brand || "";
-      document.getElementById("cardLast4").value = p.last4 || "";
-      document.getElementById("cashappTagClient").value = p.cashappTag || "";
-      document.getElementById("paypalEmailClient").value = p.paypalEmail || "";
-      document.getElementById("venmoHandleClient").value = p.venmoHandle || "";
-      document.getElementById("zelleClient").value = p.zelle || "";
-      document.getElementById("defaultPaymentType").value = p.type || "card";
-    }
+    import {
+      doc,
+      getDoc,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    document.getElementById("savePaymentBtn").onclick = () => {
+    let currentUser = null;
+
+    // -----------------------------
+    // AUTH GUARD + LOAD PAYMENT DATA
+    // -----------------------------
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        const data = snap.data().payment || {};
+
+        document.getElementById("cardBrand").value = data.brand || "";
+        document.getElementById("cardLast4").value = data.last4 || "";
+        document.getElementById("cashappTagClient").value = data.cashappTag || "";
+        document.getElementById("paypalEmailClient").value = data.paypalEmail || "";
+        document.getElementById("venmoHandleClient").value = data.venmoHandle || "";
+        document.getElementById("zelleClient").value = data.zelle || "";
+        document.getElementById("defaultPaymentType").value = data.type || "card";
+      }
+    });
+
+    // -----------------------------
+    // SAVE PAYMENT SETTINGS
+    // -----------------------------
+    document.getElementById("savePaymentBtn").onclick = async () => {
+      if (!currentUser) return;
+
       const payment = {
         type: document.getElementById("defaultPaymentType").value,
         brand: document.getElementById("cardBrand").value.trim(),
@@ -134,11 +169,13 @@
         venmoHandle: document.getElementById("venmoHandleClient").value.trim(),
         zelle: document.getElementById("zelleClient").value.trim()
       };
-      localStorage.setItem("lb_client_payment", JSON.stringify(payment));
+
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        payment
+      });
+
       alert("Payment method saved.");
     };
-
-    loadClientPayment();
   </script>
 </body>
 </html>
