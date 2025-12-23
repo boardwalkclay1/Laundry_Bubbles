@@ -5,6 +5,9 @@
   <title>Inbox – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Load Firebase -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     :root {
       --primary: #4da6ff;
@@ -71,42 +74,78 @@
 
   <div id="conversationList"></div>
 
-  <script>
-    function nav(page) { window.location.href = page; }
+  <script type="module">
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    function loadInbox() {
-      const list = document.getElementById("conversationList");
-      list.innerHTML = "";
+    import {
+      collection,
+      query,
+      where,
+      orderBy,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-      const raw = localStorage.getItem("lb_conversations");
-      if (!raw) {
-        list.innerHTML = "<p style='color:var(--muted);'>No conversations yet.</p>";
+    let currentUser = null;
+
+    const list = document.getElementById("conversationList");
+
+    // -----------------------------
+    // AUTH GUARD
+    // -----------------------------
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
         return;
       }
 
-      const conversations = JSON.parse(raw);
+      currentUser = user;
+      loadInbox();
+    });
 
-      conversations.forEach(conv => {
-        const last = conv.messages[conv.messages.length - 1];
+    // -----------------------------
+    // LOAD CONVERSATIONS FROM FIRESTORE
+    // -----------------------------
+    function loadInbox() {
+      const q = query(
+        collection(db, "conversations"),
+        where("participants", "array-contains", currentUser.uid),
+        orderBy("lastTimestamp", "desc")
+      );
 
-        const div = document.createElement("div");
-        div.className = "conversation";
-        div.onclick = () => {
-          localStorage.setItem("lb_active_conversation", conv.id);
-          nav("chat.html");
-        };
+      onSnapshot(q, (snapshot) => {
+        list.innerHTML = "";
 
-        div.innerHTML = `
-          <div class="name">${conv.otherName}</div>
-          <div class="preview">${last.text}</div>
-          <div class="time">${new Date(last.timestamp).toLocaleString()}</div>
-        `;
+        if (snapshot.empty) {
+          list.innerHTML = "<p style='color:var(--muted);'>No conversations yet.</p>";
+          return;
+        }
 
-        list.appendChild(div);
+        snapshot.forEach((docSnap) => {
+          const conv = docSnap.data();
+          const id = docSnap.id;
+
+          const otherId = conv.participants.find(p => p !== currentUser.uid);
+          const otherName = conv.otherNames?.[currentUser.uid] || "Washer";
+
+          const div = document.createElement("div");
+          div.className = "conversation";
+          div.onclick = () => {
+            localStorage.setItem("lb_active_conversation", id);
+            window.location.href = "chat.html";
+          };
+
+          div.innerHTML = `
+            <div class="name">${otherName}</div>
+            <div class="preview">${conv.lastMessage || "No messages yet"}</div>
+            <div class="time">${conv.lastTimestamp ? new Date(conv.lastTimestamp).toLocaleString() : ""}</div>
+          `;
+
+          list.appendChild(div);
+        });
       });
     }
-
-    loadInbox();
   </script>
 </body>
 </html>
