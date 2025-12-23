@@ -82,7 +82,7 @@
   </header>
 
   <section class="card">
-    <p class="sub" id="loadSummary">Recent load</p>
+    <p class="sub" id="loadSummary">Loading order…</p>
 
     <div class="tip-grid">
       <div class="tip-btn" data-percent="0.10">10%</div>
@@ -96,60 +96,111 @@
     <button class="btn btn-primary" id="saveTipBtn">Add tip</button>
   </section>
 
-  <script>
-    let selectedPercent = null;
-    const tipButtons = document.querySelectorAll(".tip-btn");
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    tipButtons.forEach(btn=>{
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const tipButtons = document.querySelectorAll(".tip-btn");
+    let selectedPercent = null;
+
+    tipButtons.forEach(btn => {
       btn.onclick = () => {
-        tipButtons.forEach(b=>b.classList.remove("active"));
+        tipButtons.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        selectedPercent = parseFloat(btn.getAttribute("data-percent"));
+        selectedPercent = parseFloat(btn.dataset.percent);
       };
     });
 
-    function loadLastCompleted(){
-      const history = JSON.parse(localStorage.getItem("lb_pickup_history") || "[]");
-      const lastIdx = parseInt(localStorage.getItem("lb_last_completed_load_index") || "-1",10);
-      if(lastIdx < 0 || !history[lastIdx]){
-        document.getElementById("loadSummary").textContent = "Most recent completed load";
+    const orderId = new URLSearchParams(window.location.search).get("orderId");
+    let orderData = null;
+
+    async function loadOrder(uid) {
+      const ref = doc(db, "orders", orderId);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        document.getElementById("loadSummary").textContent = "Order not found.";
         return;
       }
-      const load = history[lastIdx];
+
+      orderData = snap.data();
+
       document.getElementById("loadSummary").textContent =
-        `${load.washer?.name || "Your washer"} · ${load.pickupAddress || ""}`;
+        `${orderData.washerName || "Your washer"} · ${orderData.pickupAddress || ""}`;
     }
 
-    document.getElementById("saveTipBtn").onclick = () => {
-      const history = JSON.parse(localStorage.getItem("lb_pickup_history") || "[]");
-      const lastIdx = parseInt(localStorage.getItem("lb_last_completed_load_index") || "-1",10);
-      if(lastIdx < 0 || !history[lastIdx]){
-        alert("No completed load found.");
+    async function createCheckout(amount, uid) {
+      const res = await fetch(
+        "https://us-central1-launrdy-bubbles.cloudfunctions.net/createTipCheckoutSession",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId,
+            washerId: orderData.washerId,
+            amount
+          })
+        }
+      );
+
+      const data = await res.json();
+
+      if (!data.url) {
+        alert("Error creating checkout session.");
         return;
       }
-      const load = history[lastIdx];
 
-      let tip = 0;
+      window.location.href = data.url;
+    }
+
+    document.getElementById("saveTipBtn").onclick = async () => {
+      let tipAmount = 0;
+
       const custom = parseFloat(document.getElementById("customTip").value);
-      if(!isNaN(custom) && custom > 0){
-        tip = custom;
-      } else if(selectedPercent !== null){
-        const base = load.basePricePerLoad || load.washer?.price_per_load || 0;
-        tip = +(base * selectedPercent).toFixed(2);
+      if (!isNaN(custom) && custom > 0) {
+        tipAmount = custom;
+      } else if (selectedPercent !== null) {
+        const base = orderData.basePricePerLoad || 0;
+        tipAmount = +(base * selectedPercent).toFixed(2);
       }
 
-      load.tipAmount = (load.tipAmount || 0) + tip;
-      load.clientTotalPerLoad = (load.clientTotalPerLoad || 0) + tip;
-      load.washerEarningsPerLoad = (load.washerEarningsPerLoad || load.basePricePerLoad || 0) + tip;
+      if (tipAmount <= 0) {
+        alert("Please select or enter a tip amount.");
+        return;
+      }
 
-      history[lastIdx] = load;
-      localStorage.setItem("lb_pickup_history", JSON.stringify(history));
-
-      alert("Tip added. Thank you!");
-      window.location.href = "client-dashboard.html";
+      await createCheckout(tipAmount, auth.currentUser.uid);
     };
 
-    loadLastCompleted();
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      loadOrder(user.uid);
+    });
   </script>
 </body>
 </html>
