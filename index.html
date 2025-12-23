@@ -5,6 +5,9 @@
   <title>Laundry Bubbles · Roll & Connect</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Load Firebase -->
+  <script type="module" src="/firebase.js"></script>
+
   <style>
     :root {
       --primary: #4da6ff;
@@ -35,7 +38,6 @@
       position: relative;
     }
 
-    /* Grid overlay */
     .grid-overlay {
       position: fixed;
       inset: 0;
@@ -160,7 +162,18 @@
     <button class="btn btn-secondary" id="signupBtn">Create Account</button>
   </div>
 
-  <script>
+  <script type="module">
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // Auto‑redirect if logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "client-dashboard.html";
+      }
+    });
+
     document.getElementById("loginBtn").onclick = () => {
       window.location.href = "login.html";
     };
