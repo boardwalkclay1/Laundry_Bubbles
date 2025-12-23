@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Washer Map – Laundry Bubbles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root {
+      --primary:#4da6ff; --accent:#7a5cff; --text:#f9fbff; --muted:#9aa3c7;
+      --card:rgba(5,7,18,0.96);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif;}
+
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 20% 20%,rgba(77,166,255,0.18),transparent 60%),
+        radial-gradient(circle at 80% 80%,rgba(122,92,255,0.18),transparent 60%),
+        #030715;
+      color:var(--text);
+      padding:10px;
+      overflow:hidden;
+      position:relative;
+    }
+
+    header{
+      display:flex;align-items:center;gap:10px;margin-bottom:10px;
+    }
+
+    .back{
+      width:34px;height:34px;border-radius:999px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(5,7,18,0.9);
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-size:16px;
+    }
+
+    #map{
+      width:100%;
+      height:calc(100vh - 220px);
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,0.16);
+      overflow:hidden;
+    }
+
+    .bottom-sheet{
+      position:fixed;left:0;right:0;bottom:0;
+      max-width:700px;margin:0 auto;
+      padding:8px 10px 14px;
+      z-index:10;
+    }
+
+    .sheet-inner{
+      background:var(--card);
+      border-radius:18px 18px 0 0;
+      border-top:1px solid rgba(255,255,255,0.14);
+      box-shadow:0 -14px 34px rgba(0,0,0,0.75);
+      padding:8px 12px 10px;
+      max-height:260px;
+      display:flex;flex-direction:column;gap:8px;
+    }
+
+    .sheet-handle{
+      width:36px;height:3px;border-radius:999px;
+      background:rgba(255,255,255,0.26);
+      margin:4px auto 6px;
+    }
+
+    .request-list{
+      overflow-x:auto;
+      display:flex;gap:10px;
+      padding-bottom:4px;
+    }
+
+    .request-card{
+      min-width:260px;max-width:280px;
+      background:rgba(10,12,30,0.98);
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.16);
+      padding:10px;
+      box-shadow:0 8px 20px rgba(0,0,0,0.6);
+      cursor:pointer;
+      transition:0.15s ease;
+      display:flex;flex-direction:column;gap:6px;
+    }
+
+    .request-card.active{
+      border-color:var(--primary);
+      box-shadow:0 12px 28px rgba(77,166,255,0.6);
+      transform:translateY(-2px);
+    }
+
+    .request-title{font-size:15px;font-weight:600;}
+    .request-meta{font-size:12px;color:var(--muted);}
+    .request-notes{font-size:12px;color:var(--muted);}
+    .btn{
+      padding:6px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      font-size:12px;
+      font-weight:600;
+      white-space:nowrap;
+    }
+    .btn-primary{
+      background:linear-gradient(135deg,var(--primary),var(--accent));
+      color:#fff;
+    }
+    .btn-secondary{
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.12);
+      color:var(--muted);
+    }
+    .btn-row{display:flex;gap:6px;margin-top:4px;}
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="back" onclick="window.location.href='washer-dashboard.html'">←</div>
+    <h2>Pickup Requests</h2>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="bottom-sheet">
+    <div class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <div class="request-list" id="requestList"></div>
+    </div>
+  </div>
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB02c_eleXuhHWdSMJzqk9mESbXn_PT2zc"></script>
+
+  <script>
+    function nav(page){ window.location.href = page; }
+
+    function openDirections(lat,lng){
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,"_blank");
+    }
+
+    // Load pickup requests from localStorage
+    const pickupRequests = JSON.parse(localStorage.getItem("lb_pickup_history") || "[]");
+
+    let map;
+    const markersById = {};
+    let activeId = null;
+
+    function initMap(){
+      const defaultPos = { lat:33.7490, lng:-84.3880 };
+
+      map = new google.maps.Map(document.getElementById("map"),{
+        center:defaultPos,
+        zoom:12,
+        styles:[
+          {elementType:"geometry",stylers:[{color:"#1d1d2b"}]},
+          {elementType:"labels.text.fill",stylers:[{color:"#f9fbff"}]},
+          {featureType:"water",stylers:[{color:"#0b0f1a"}]}
+        ]
+      });
+
+      pickupRequests.forEach((req,i)=>{
+        if(!req.pickupLat || !req.pickupLng) return;
+
+        const marker = new google.maps.Marker({
+          position:{lat:req.pickupLat,lng:req.pickupLng},
+          map,
+          icon:"https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+        });
+
+        markersById[i] = marker;
+
+        marker.addListener("click",()=>focusRequest(i,true));
+      });
+
+      buildRequestList();
+    }
+
+    function ensureConversation(clientId, washerId, name){
+      const convId = `conversation_${clientId}_${washerId}`;
+      const raw = localStorage.getItem("lb_conversations");
+      const list = raw ? JSON.parse(raw) : [];
+      let conv = list.find(c=>c.id===convId);
+      if(!conv){
+        conv = { id:convId, clientId, washerId, otherName:name, messages:[] };
+        list.push(conv);
+        localStorage.setItem("lb_conversations",JSON.stringify(list));
+      }
+      localStorage.setItem("lb_active_conversation",convId);
+      return convId;
+    }
+
+    function buildRequestList(){
+      const listEl = document.getElementById("requestList");
+      listEl.innerHTML = "";
+
+      pickupRequests.forEach((req,i)=>{
+        const card = document.createElement("div");
+        card.className = "request-card";
+        card.dataset.id = i;
+
+        card.innerHTML = `
+          <div class="request-title">${req.washer?.name || "Client"}</div>
+          <div class="request-meta">${req.pickupAddress}</div>
+          <div class="request-meta">Window: ${req.pickupWindow}</div>
+          <div class="request-notes">${req.notes || ""}</div>
+          <div class="btn-row">
+            <button class="btn btn-primary" data-role="message" data-id="${i}">Message</button>
+            <button class="btn btn-secondary" data-role="directions" data-id="${i}">Directions</button>
+          </div>
+        `;
+
+        card.addEventListener("click",(e)=>{
+          const role = e.target.getAttribute("data-role");
+          const id = e.target.getAttribute("data-id");
+
+          if(role){
+            const r = pickupRequests[id];
+            if(role==="message"){
+              const washer = JSON.parse(localStorage.getItem("lb_user"));
+              ensureConversation(r.clientId || "client", washer.id, r.washer?.name || "Client");
+              nav("inbox.html");
+            }
+            if(role==="directions"){
+              openDirections(r.pickupLat, r.pickupLng);
+            }
+            e.stopPropagation();
+            return;
+          }
+
+          focusRequest(i,true);
+        });
+
+        listEl.appendChild(card);
+      });
+    }
+
+    function focusRequest(id,centerMap){
+      activeId = id;
+      const cards = document.querySelectorAll(".request-card");
+      cards.forEach(card=>{
+        card.classList.toggle("active",card.dataset.id==id);
+        if(card.dataset.id==id && centerMap){
+          card.scrollIntoView({behavior:"smooth",inline:"center"});
+        }
+      });
+
+      const req = pickupRequests[id];
+      if(req && centerMap && markersById[id]){
+        map.panTo({lat:req.pickupLat,lng:req.pickupLng});
+        map.setZoom(14);
+      }
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>
