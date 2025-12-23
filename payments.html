@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payments & Payouts – Laundry Bubbles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --primary:#4da6ff;
+      --accent:#7a5cff;
+      --text:#f9fbff;
+      --muted:#9aa3c7;
+      --card:rgba(255,255,255,0.05);
+      --danger:#ff4d6a;
+      --success:#4dffb3;
+      --warning:#ffc94d;
+    }
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    }
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 20% 20%,rgba(77,166,255,0.18),transparent 60%),
+        radial-gradient(circle at 80% 80%,rgba(122,92,255,0.18),transparent 60%),
+        #030715;
+      color:var(--text);
+      padding:16px;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:16px;
+    }
+    .back{
+      width:34px;
+      height:34px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(5,7,18,0.9);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      font-size:16px;
+    }
+    h1{
+      font-size:20px;
+      margin-bottom:4px;
+    }
+    .sub{
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:16px;
+      padding:14px;
+      margin-bottom:12px;
+    }
+    .card-title{
+      font-size:16px;
+      margin-bottom:6px;
+    }
+    label{
+      font-size:13px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:4px;
+    }
+    input{
+      width:100%;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      margin-bottom:10px;
+      font-size:14px;
+    }
+    input::placeholder{
+      color:rgba(154,163,199,0.7);
+    }
+    .btn{
+      width:100%;
+      padding:12px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+      font-size:15px;
+      margin-top:6px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      transition:transform 0.08s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+    .btn:active{
+      transform:scale(0.97);
+      box-shadow:none;
+    }
+    .btn-primary{
+      background:linear-gradient(135deg,var(--primary),var(--accent));
+      color:#fff;
+      box-shadow:0 12px 28px rgba(77,166,255,0.45);
+    }
+    .btn-secondary{
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,0.16);
+      box-shadow:0 8px 20px rgba(0,0,0,0.4);
+    }
+    .btn-ghost{
+      background:transparent;
+      border:1px dashed rgba(255,255,255,0.18);
+      color:var(--muted);
+    }
+    .btn[disabled]{
+      opacity:0.5;
+      cursor:default;
+      box-shadow:none;
+      transform:none;
+    }
+    .hint{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:6px;
+    }
+    .payout-line{
+      font-size:13px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    .status-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.12);
+      margin-top:4px;
+    }
+    .status-dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+    }
+    .status-dot.pending{
+      background:var(--warning);
+    }
+    .status-dot.verified{
+      background:var(--success);
+    }
+    .status-dot.restricted{
+      background:var(--danger);
+    }
+    .status-label{
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      font-weight:600;
+    }
+    .status-text{
+      font-size:11px;
+      color:var(--muted);
+    }
+    .error{
+      font-size:12px;
+      color:var(--danger);
+      margin-top:6px;
+    }
+    .success{
+      font-size:12px;
+      color:var(--success);
+      margin-top:6px;
+    }
+    .row{
+      display:flex;
+      gap:8px;
+      margin-top:8px;
+      flex-wrap:wrap;
+    }
+    .row .btn{
+      flex:1;
+      min-width:130px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="back" onclick="window.location.href='settings.html'">←</div>
+    <div>
+      <h1>Payments & payouts</h1>
+      <p class="sub">
+        Connect secure payouts and add your payout handles. Cards and bank details are handled by Stripe, not this app.
+      </p>
+    </div>
+  </header>
+
+  <!-- Stripe Connect section -->
+  <section class="card">
+    <h3 class="card-title">Stripe Connect payouts</h3>
+    <p class="hint">
+      Stripe securely handles card details, bank accounts, identity checks, and compliance. We never see or store card or
+      bank numbers in this app.
+    </p>
+
+    <div id="stripeStatusPill" class="status-pill" style="display:none;">
+      <span id="stripeStatusDot" class="status-dot"></span>
+      <span id="stripeStatusLabel" class="status-label"></span>
+      <span id="stripeStatusText" class="status-text"></span>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" id="stripeOnboardBtn">
+        <span>Set up payouts with Stripe</span>
+      </button>
+      <button class="btn btn-secondary" id="stripeDashboardBtn" disabled>
+        <span>Open Stripe payout dashboard</span>
+      </button>
+    </div>
+
+    <p class="hint">
+      You’ll be redirected to Stripe to complete onboarding or update your payout details. When you’re done, you’ll be
+      sent back to Laundry Bubbles.
+    </p>
+
+    <div id="stripeMessage" class="error" style="display:none;"></div>
+  </section>
+
+  <!-- Extra payout handles (non-sensitive) -->
+  <section class="card">
+    <h3 class="card-title">Optional extra payout handles</h3>
+    <label for="paypalEmail">PayPal email (optional)</label>
+    <input id="paypalEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+
+    <label for="cashappTag">CashApp tag (optional)</label>
+    <input id="cashappTag" placeholder="$yourtag" />
+
+    <label for="bankNickname">Bank nickname (optional)</label>
+    <input id="bankNickname" placeholder="e.g. “Chase checking”" />
+
+    <button class="btn btn-primary" id="savePayoutBtn">Save payout settings</button>
+    <p class="hint">
+      These are just labels and handles your customers or our support team may see. Do not enter full card
+      numbers, routing numbers, or account numbers here.
+    </p>
+    <div class="payout-line" id="currentPayoutSummary"></div>
+    <div id="payoutMessage" class="success" style="display:none;"></div>
+  </section>
+
+  <script>
+    // ========= CONFIG / CONTRACT WITH BACKEND =========
+    // Expected backend endpoints (you implement these on the server):
+    // 1) GET  /api/payout-settings        -> { paypalEmail, cashappTag, bankNickname, stripeStatus }
+    // 2) POST /api/payout-settings        -> saves the three fields above
+    // 3) POST /api/stripe/create-onboarding-link
+    //      -> { url } Stripe Connect onboarding/refresh link for this logged-in user
+    // 4) POST /api/stripe/create-dashboard-link
+    //      -> { url } Stripe Express/Connect dashboard link for this logged-in user
+    //
+    // "stripeStatus" should be one of: "not_created", "pending", "verified", "restricted".
+    // Map this from Stripe account: details_submitted, charges_enabled, payouts_enabled, requirements, etc.
+
+    const stripeStatusPill = document.getElementById("stripeStatusPill");
+    const stripeStatusDot = document.getElementById("stripeStatusDot");
+    const stripeStatusLabel = document.getElementById("stripeStatusLabel");
+    const stripeStatusText = document.getElementById("stripeStatusText");
+    const stripeOnboardBtn = document.getElementById("stripeOnboardBtn");
+    const stripeDashboardBtn = document.getElementById("stripeDashboardBtn");
+    const stripeMessageEl = document.getElementById("stripeMessage");
+
+    const paypalInput = document.getElementById("paypalEmail");
+    const cashappInput = document.getElementById("cashappTag");
+    const bankNicknameInput = document.getElementById("bankNickname");
+    const payoutSummaryEl = document.getElementById("currentPayoutSummary");
+    const payoutMessageEl = document.getElementById("payoutMessage");
+    const savePayoutBtn = document.getElementById("savePayoutBtn");
+
+    function setStripeStatus(status){
+      // status: "not_created" | "pending" | "verified" | "restricted" | undefined
+      if(!status || status === "not_created"){
+        stripeStatusPill.style.display = "none";
+        stripeDashboardBtn.disabled = true;
+        stripeOnboardBtn.disabled = false;
+        return;
+      }
+
+      stripeStatusPill.style.display = "inline-flex";
+
+      stripeStatusDot.classList.remove("pending","verified","restricted");
+      let label = "";
+      let text = "";
+
+      if(status === "pending"){
+        stripeStatusDot.classList.add("pending");
+        label = "PENDING REVIEW";
+        text = "Stripe is still reviewing or needs more information.";
+        stripeDashboardBtn.disabled = false;
+        stripeOnboardBtn.disabled = false;
+      } else if(status === "verified"){
+        stripeStatusDot.classList.add("verified");
+        label = "ACTIVE";
+        text = "Payouts are active and can be processed.";
+        stripeDashboardBtn.disabled = false;
+        stripeOnboardBtn.disabled = false;
+      } else if(status === "restricted"){
+        stripeStatusDot.classList.add("restricted");
+        label = "ACTION NEEDED";
+        text = "Stripe needs additional information to keep payouts running.";
+        stripeDashboardBtn.disabled = false;
+        stripeOnboardBtn.disabled = false;
+      }
+
+      stripeStatusLabel.textContent = label;
+      stripeStatusText.textContent = text;
+    }
+
+    function renderPayoutSummary(data){
+      const summary = [];
+      if(data.paypalEmail) summary.push("PayPal: " + data.paypalEmail);
+      if(data.cashappTag) summary.push("CashApp: " + data.cashappTag);
+      if(data.bankNickname) summary.push("Bank: " + data.bankNickname);
+
+      payoutSummaryEl.textContent = summary.length
+        ? "Current: " + summary.join(" · ")
+        : "No optional payout handles set yet.";
+    }
+
+    function showStripeError(message){
+      stripeMessageEl.style.display = "block";
+      stripeMessageEl.textContent = message || "Something went wrong with Stripe. Please try again.";
+    }
+
+    function clearStripeError(){
+      stripeMessageEl.style.display = "none";
+      stripeMessageEl.textContent = "";
+    }
+
+    function showPayoutMessage(message, isError){
+      payoutMessageEl.style.display = "block";
+      payoutMessageEl.textContent = message;
+      payoutMessageEl.className = isError ? "error" : "success";
+    }
+
+    // ========= INITIAL LOAD =========
+    async function loadPayoutSettingsFromBackend(){
+      try{
+        const res = await fetch("/api/payout-settings", {
+          method:"GET",
+          credentials:"include"
+        });
+        if(!res.ok){
+          throw new Error("Failed to load payout settings.");
+        }
+        const data = await res.json();
+
+        paypalInput.value = data.paypalEmail || "";
+        cashappInput.value = data.cashappTag || "";
+        bankNicknameInput.value = data.bankNickname || "";
+
+        renderPayoutSummary(data);
+        setStripeStatus(data.stripeStatus);
+      }catch(err){
+        console.error(err);
+        payoutSummaryEl.textContent = "Unable to load payout settings. Please refresh.";
+      }
+    }
+
+    // ========= SAVE NON-SENSITIVE PAYOUT HANDLES =========
+    savePayoutBtn.onclick = async () => {
+      clearStripeError();
+      payoutMessageEl.style.display = "none";
+
+      const payload = {
+        paypalEmail: paypalInput.value.trim(),
+        cashappTag: cashappInput.value.trim(),
+        bankNickname: bankNicknameInput.value.trim()
+      };
+
+      // Simple client-side validation
+      if(payload.paypalEmail && !payload.paypalEmail.includes("@")){
+        showPayoutMessage("Please enter a valid PayPal email address.", true);
+        return;
+      }
+      if(payload.cashappTag && !payload.cashappTag.startsWith("$")){
+        showPayoutMessage("CashApp tags should start with “$”.", true);
+        return;
+      }
+
+      savePayoutBtn.disabled = true;
+      savePayoutBtn.textContent = "Saving…";
+
+      try{
+        const res = await fetch("/api/payout-settings", {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          credentials:"include",
+          body: JSON.stringify(payload)
+        });
+        if(!res.ok){
+          throw new Error("Failed to save payout settings.");
+        }
+        const saved = await res.json();
+        renderPayoutSummary(saved);
+        showPayoutMessage("Payout settings saved.", false);
+      }catch(err){
+        console.error(err);
+        showPayoutMessage("Could not save payout settings. Please try again.", true);
+      }finally{
+        savePayoutBtn.disabled = false;
+        savePayoutBtn.textContent = "Save payout settings";
+      }
+    };
+
+    // ========= STRIPE CONNECT: ONBOARDING =========
+    stripeOnboardBtn.onclick = async () => {
+      clearStripeError();
+      stripeOnboardBtn.disabled = true;
+      stripeOnboardBtn.textContent = "Connecting to Stripe…";
+
+      try{
+        const res = await fetch("/api/stripe/create-onboarding-link", {
+          method:"POST",
+          credentials:"include"
+        });
+        if(!res.ok){
+          throw new Error("Failed to create Stripe onboarding link.");
+        }
+        const data = await res.json();
+        if(!data.url){
+          throw new Error("Stripe did not return a redirect URL.");
+        }
+        window.location.href = data.url;
+      }catch(err){
+        console.error(err);
+        showStripeError("We couldn’t start Stripe onboarding. Please try again or contact support.");
+        stripeOnboardBtn.disabled = false;
+        stripeOnboardBtn.textContent = "Set up payouts with Stripe";
+      }
+    };
+
+    // ========= STRIPE CONNECT: DASHBOARD =========
+    stripeDashboardBtn.onclick = async () => {
+      clearStripeError();
+      stripeDashboardBtn.disabled = true;
+      stripeDashboardBtn.textContent = "Opening dashboard…";
+
+      try{
+        const res = await fetch("/api/stripe/create-dashboard-link", {
+          method:"POST",
+          credentials:"include"
+        });
+        if(!res.ok){
+          throw new Error("Failed to create Stripe dashboard link.");
+        }
+        const data = await res.json();
+        if(!data.url){
+          throw new Error("Stripe did not return a dashboard URL.");
+        }
+        window.location.href = data.url;
+      }catch(err){
+        console.error(err);
+        showStripeError("We couldn’t open your Stripe dashboard. Please try again.");
+        stripeDashboardBtn.disabled = false;
+        stripeDashboardBtn.textContent = "Open Stripe payout dashboard";
+      }
+    };
+
+    // Kickoff
+    loadPayoutSettingsFromBackend();
+  </script>
+</body>
+</html>
