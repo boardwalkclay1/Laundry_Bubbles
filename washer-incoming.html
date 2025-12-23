@@ -48,113 +48,155 @@
 
   <div class="card" id="orderCard">Loading...</div>
 
-  <button class="btn accept" onclick="acceptOrder()">Accept Order</button>
-  <button class="btn decline" onclick="declineOrder()">Decline Order</button>
+  <button class="btn accept" id="acceptBtn">Accept Order</button>
+  <button class="btn decline" id="declineBtn">Decline Order</button>
 
   <script type="module">
-    import { supabase } from "./supabase.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore,
+      collection,
+      query,
+      where,
+      orderBy,
+      limit,
+      getDocs,
+      doc,
+      updateDoc,
+      addDoc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRjiZum9L0UGLxDap4duEN3VIPj4PAmvo",
+      authDomain: "launrdy-bubbles.firebaseapp.com",
+      projectId: "launrdy-bubbles",
+      storageBucket: "launrdy-bubbles.firebasestorage.app",
+      messagingSenderId: "625079841514",
+      appId: "1:625079841514:web:472b2721f4acb836111d93",
+      measurementId: "G-QT16Z65J1E"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     let currentOrder = null;
 
-    // -----------------------------
-    // REAL-TIME SUBSCRIPTION
-    // -----------------------------
-    supabase
-      .channel("incoming-orders")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        payload => {
-          if (payload.new.id === currentOrder?.id) {
-            if (payload.new.washer_id !== session.user.id) {
-              alert("This order was assigned to another washer.");
-              window.location.href = "washer-orders.html";
-            }
-            if (payload.new.status !== "pending_acceptance") {
-              window.location.href = "washer-orders.html";
-            }
-          }
-        }
-      )
-      .subscribe();
+    const orderCard = document.getElementById("orderCard");
+    const acceptBtn = document.getElementById("acceptBtn");
+    const declineBtn = document.getElementById("declineBtn");
 
-    // -----------------------------
-    // LOAD INCOMING ORDER
-    // -----------------------------
-    async function loadIncoming() {
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("washer_id", session.user.id)
-        .eq("status", "pending_acceptance")
-        .order("created_at", { ascending: false })
-        .limit(1);
+    async function loadIncoming(uid) {
+      const ref = collection(db, "orders");
 
-      if (!orders || orders.length === 0) {
-        document.getElementById("orderCard").innerText =
-          "No incoming orders.";
+      const q = query(
+        ref,
+        where("washerId", "==", uid),
+        where("status", "==", "pending_acceptance"),
+        orderBy("createdAt", "desc"),
+        limit(1)
+      );
+
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        orderCard.innerText = "No incoming orders.";
+        acceptBtn.style.display = "none";
+        declineBtn.style.display = "none";
         return;
       }
 
-      currentOrder = orders[0];
+      const docSnap = snap.docs[0];
+      currentOrder = { id: docSnap.id, ...docSnap.data() };
 
-      const pickup = currentOrder.pickup_time
-        ? new Date(currentOrder.pickup_time).toLocaleString()
+      renderOrder();
+
+      // Real-time updates for THIS order
+      const orderRef = doc(db, "orders", currentOrder.id);
+      onSnapshot(orderRef, (updateSnap) => {
+        if (!updateSnap.exists()) return;
+
+        const updated = updateSnap.data();
+
+        // If assigned to someone else
+        if (updated.washerId !== uid) {
+          alert("This order was assigned to another washer.");
+          window.location.href = "washer-orders.html";
+        }
+
+        // If status changed away from pending_acceptance
+        if (updated.status !== "pending_acceptance") {
+          window.location.href = "washer-orders.html";
+        }
+      });
+    }
+
+    function renderOrder() {
+      const pickup = currentOrder.pickupTime
+        ? new Date(currentOrder.pickupTime).toLocaleString()
         : "Not set";
 
-      document.getElementById("orderCard").innerHTML = `
+      orderCard.innerHTML = `
         <div><span class="label">Order ID:</span> #${currentOrder.id}</div>
-        <div><span class="label">Loads:</span> ${currentOrder.loads}</div>
+        <div><span class="label">Loads:</span> ${currentOrder.loads || 0}</div>
         <div><span class="label">Pickup:</span> ${pickup}</div>
         <div><span class="label">Notes:</span> ${currentOrder.notes || "None"}</div>
       `;
     }
 
-    await loadIncoming();
+    async function acceptOrder(uid) {
+      const ref = doc(db, "orders", currentOrder.id);
 
-    // -----------------------------
-    // ACCEPT ORDER
-    // -----------------------------
-    window.acceptOrder = async function () {
-      await supabase
-        .from("orders")
-        .update({ status: "accepted" })
-        .eq("id", currentOrder.id);
+      await updateDoc(ref, {
+        status: "accepted"
+      });
 
-      await supabase.from("order_events").insert({
-        order_id: currentOrder.id,
+      await addDoc(collection(db, "order_events"), {
+        orderId: currentOrder.id,
+        washerId: uid,
         status: "accepted",
-        message: "Washer accepted the order."
+        message: "Washer accepted the order.",
+        createdAt: Date.now()
       });
 
       window.location.href = `washer-order-page.html?order_id=${currentOrder.id}`;
-    };
+    }
 
-    // -----------------------------
-    // DECLINE ORDER
-    // -----------------------------
-    window.declineOrder = async function () {
-      // Mark decline
-      await supabase
-        .from("order_events")
-        .insert({
-          order_id: currentOrder.id,
-          status: "declined",
-          message: "Washer declined the order."
-        });
+    async function declineOrder(uid) {
+      await addDoc(collection(db, "order_events"), {
+        orderId: currentOrder.id,
+        washerId: uid,
+        status: "declined",
+        message: "Washer declined the order.",
+        createdAt: Date.now()
+      });
 
-      // Remove washer assignment
-      await supabase
-        .from("orders")
-        .update({ washer_id: null })
-        .eq("id", currentOrder.id);
+      const ref = doc(db, "orders", currentOrder.id);
+
+      await updateDoc(ref, {
+        washerId: null
+      });
 
       alert("Order declined. Searching for next washer.");
       window.location.href = "washer-orders.html";
-    };
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      loadIncoming(user.uid);
+
+      acceptBtn.onclick = () => acceptOrder(user.uid);
+      declineBtn.onclick = () => declineOrder(user.uid);
+    });
   </script>
 </body>
 </html>
