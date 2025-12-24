@@ -4,31 +4,32 @@ import { useEffect } from "react";
 
 export default function Home() {
   useEffect(() => {
-    // Load firebase.js (your config + auth instance)
-    const firebaseScript = document.createElement("script");
-    firebaseScript.src = "/firebase.js";
-    firebaseScript.type = "module";
-    document.body.appendChild(firebaseScript);
+    if (typeof window !== "undefined") {
+      // Load firebase.js (now inside /public)
+      const firebaseScript = document.createElement("script");
+      firebaseScript.src = "/firebase.js";
+      firebaseScript.type = "module";
+      document.body.appendChild(firebaseScript);
 
-    // Load Firebase Auth SDK (browser only)
-    const authScript = document.createElement("script");
-    authScript.src =
-      "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    authScript.type = "module";
-    document.body.appendChild(authScript);
+      // Load Firebase Auth SDK (browser only)
+      const authScript = document.createElement("script");
+      authScript.src =
+        "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+      authScript.type = "module";
+      document.body.appendChild(authScript);
 
-    authScript.onload = () => {
-      // We are NOT redirecting anymore.
-      // Homepage always loads.
+      authScript.onload = () => {
+        // No redirect — homepage always loads
 
-      // Button handlers
-      const loginBtn = document.getElementById("loginBtn");
-      const signupBtn = document.getElementById("signupBtn");
+        // Button handlers
+        const loginBtn = document.getElementById("loginBtn");
+        const signupBtn = document.getElementById("signupBtn");
 
-      if (loginBtn) loginBtn.onclick = () => (window.location.href = "login.html");
-      if (signupBtn)
-        signupBtn.onclick = () => (window.location.href = "signup.html");
-    };
+        if (loginBtn) loginBtn.onclick = () => (window.location.href = "login.html");
+        if (signupBtn)
+          signupBtn.onclick = () => (window.location.href = "signup.html");
+      };
+    }
   }, []);
 
   return (
