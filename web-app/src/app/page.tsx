@@ -1,28 +1,39 @@
 "use client";
 
 import { useEffect } from "react";
-// Import firebase.js from project root
-// @ts-ignore
-import { auth } from "../../firebase.js";
 
 export default function Home() {
   useEffect(() => {
-    // Load Firebase Auth dynamically (client-side only)
-    import("firebase/auth").then(({ onAuthStateChanged }) => {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          window.location.href = "client-dashboard.html";
-        }
-      });
-    });
+    // Load firebase.js dynamically in the browser
+    const script = document.createElement("script");
+    script.src = "/firebase.js";
+    script.type = "module";
+    document.body.appendChild(script);
 
-    // Button handlers
-    const loginBtn = document.getElementById("loginBtn");
-    const signupBtn = document.getElementById("signupBtn");
+    // After firebase.js loads, run your auth logic
+    script.onload = () => {
+      // @ts-ignore - auth is defined globally by firebase.js
+      if (typeof auth !== "undefined") {
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js").then(
+          ({ onAuthStateChanged }) => {
+            // @ts-ignore
+            onAuthStateChanged(auth, (user) => {
+              if (user) {
+                window.location.href = "client-dashboard.html";
+              }
+            });
+          }
+        );
+      }
 
-    if (loginBtn) loginBtn.onclick = () => (window.location.href = "login.html");
-    if (signupBtn)
-      signupBtn.onclick = () => (window.location.href = "signup.html");
+      // Button handlers
+      const loginBtn = document.getElementById("loginBtn");
+      const signupBtn = document.getElementById("signupBtn");
+
+      if (loginBtn) loginBtn.onclick = () => (window.location.href = "login.html");
+      if (signupBtn)
+        signupBtn.onclick = () => (window.location.href = "signup.html");
+    };
   }, []);
 
   return (
