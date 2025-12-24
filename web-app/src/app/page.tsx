@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-// @ts-ignore - firebase.js is a browser-side module
-import { auth } from "../../firebase"; 
-// If firebase.js is in /public, use: import { auth } from "/firebase.js";
+// Import firebase.js from project root
+// @ts-ignore
+import { auth } from "../../firebase.js";
 
 export default function Home() {
   useEffect(() => {
