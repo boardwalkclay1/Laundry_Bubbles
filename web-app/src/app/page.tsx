@@ -18,15 +18,8 @@ export default function Home() {
     document.body.appendChild(authScript);
 
     authScript.onload = () => {
-      // @ts-ignore - auth is defined globally by firebase.js
-      if (typeof auth !== "undefined") {
-        // @ts-ignore
-        onAuthStateChanged(auth, (user) => {
-          if (user) {
-            window.location.href = "client-dashboard.html";
-          }
-        });
-      }
+      // We are NOT redirecting anymore.
+      // Homepage always loads.
 
       // Button handlers
       const loginBtn = document.getElementById("loginBtn");
