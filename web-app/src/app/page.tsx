@@ -4,26 +4,28 @@ import { useEffect } from "react";
 
 export default function Home() {
   useEffect(() => {
-    // Load firebase.js dynamically in the browser
-    const script = document.createElement("script");
-    script.src = "/firebase.js";
-    script.type = "module";
-    document.body.appendChild(script);
+    // Load firebase.js (your config + auth instance)
+    const firebaseScript = document.createElement("script");
+    firebaseScript.src = "/firebase.js";
+    firebaseScript.type = "module";
+    document.body.appendChild(firebaseScript);
 
-    // After firebase.js loads, run your auth logic
-    script.onload = () => {
+    // Load Firebase Auth SDK (browser only)
+    const authScript = document.createElement("script");
+    authScript.src =
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    authScript.type = "module";
+    document.body.appendChild(authScript);
+
+    authScript.onload = () => {
       // @ts-ignore - auth is defined globally by firebase.js
       if (typeof auth !== "undefined") {
-        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js").then(
-          ({ onAuthStateChanged }) => {
-            // @ts-ignore
-            onAuthStateChanged(auth, (user) => {
-              if (user) {
-                window.location.href = "client-dashboard.html";
-              }
-            });
+        // @ts-ignore
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            window.location.href = "client-dashboard.html";
           }
-        );
+        });
       }
 
       // Button handlers
