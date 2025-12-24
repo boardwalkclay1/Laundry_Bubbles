@@ -1,187 +1,156 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Laundry Bubbles · Roll & Connect</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+"use client";
 
-  <!-- Load Firebase -->
-  <script type="module" src="/firebase.js"></script>
+import { useEffect } from "react";
+// @ts-ignore - firebase.js is a browser-side module
+import { auth } from "../../firebase"; 
+// If firebase.js is in /public, use: import { auth } from "/firebase.js";
 
-  <style>
-    :root {
-      --primary: #4da6ff;
-      --accent: #7a5cff;
-      --text: #f9fbff;
-      --muted: #9aa3c7;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: system-ui, sans-serif;
-    }
-
-    body {
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(77,166,255,0.18), transparent 60%),
-        radial-gradient(circle at 80% 80%, rgba(122,92,255,0.18), transparent 60%),
-        #030715;
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px 20px;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    .grid-overlay {
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-      background-size: 48px 48px;
-      opacity: 0.35;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    header {
-      width: 100%;
-      max-width: 600px;
-      display: flex;
-      justify-content: center;
-      margin-bottom: 40px;
-      z-index: 2;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-circle {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--primary));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 20px;
-      color: #fff;
-      box-shadow: 0 0 18px rgba(77,166,255,0.45);
-    }
-
-    .logo-text {
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .hero {
-      text-align: center;
-      margin-top: 20px;
-      z-index: 2;
-    }
-
-    .hero h1 {
-      font-size: 32px;
-      line-height: 1.2;
-      margin-bottom: 12px;
-      text-shadow: 0 0 12px rgba(77,166,255,0.4);
-    }
-
-    .hero p {
-      font-size: 15px;
-      color: var(--muted);
-      margin-bottom: 30px;
-    }
-
-    .btn {
-      width: 100%;
-      max-width: 320px;
-      padding: 12px;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 16px;
-      margin: 10px auto;
-      display: block;
-      transition: 0.15s ease;
-      z-index: 2;
-      position: relative;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: #fff;
-      box-shadow: 0 12px 28px rgba(77,166,255,0.45);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 16px 34px rgba(77,166,255,0.6);
-    }
-
-    .btn-secondary {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: var(--muted);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="grid-overlay"></div>
-
-  <header>
-    <div class="logo">
-      <div class="logo-circle">LB</div>
-      <div class="logo-text">Laundry Bubbles</div>
-    </div>
-  </header>
-
-  <div class="hero">
-    <h1>Fresh laundry,<br> delivered with care</h1>
-    <p>Pickup, wash, dry & fold — powered by trusted local washers.</p>
-
-    <button class="btn btn-primary" id="loginBtn">Log In</button>
-    <button class="btn btn-secondary" id="signupBtn">Create Account</button>
-  </div>
-
-  <script type="module">
-    import {
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-    // Auto‑redirect if logged in
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = "client-dashboard.html";
-      }
+export default function Home() {
+  useEffect(() => {
+    // Load Firebase Auth dynamically (client-side only)
+    import("firebase/auth").then(({ onAuthStateChanged }) => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          window.location.href = "client-dashboard.html";
+        }
+      });
     });
 
-    document.getElementById("loginBtn").onclick = () => {
-      window.location.href = "login.html";
-    };
+    // Button handlers
+    const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
 
-    document.getElementById("signupBtn").onclick = () => {
-      window.location.href = "signup.html";
-    };
-  </script>
+    if (loginBtn) loginBtn.onclick = () => (window.location.href = "login.html");
+    if (signupBtn)
+      signupBtn.onclick = () => (window.location.href = "signup.html");
+  }, []);
 
-</body>
-</html>
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(77,166,255,0.18), transparent 60%), radial-gradient(circle at 80% 80%, rgba(122,92,255,0.18), transparent 60%), #030715",
+        color: "#f9fbff",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "30px 20px",
+        overflowX: "hidden",
+        position: "relative",
+        fontFamily: "system-ui, sans-serif",
+      }}
+    >
+      {/* Grid Overlay */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+          opacity: 0.35,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Header */}
+      <header
+        style={{
+          width: "100%",
+          maxWidth: "600px",
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "40px",
+          zIndex: 2,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background:
+                "linear-gradient(135deg, #7a5cff, #4da6ff)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              fontSize: "20px",
+              color: "#fff",
+              boxShadow: "0 0 18px rgba(77,166,255,0.45)",
+            }}
+          >
+            LB
+          </div>
+          <div style={{ fontSize: "20px", fontWeight: 600 }}>
+            Laundry Bubbles
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <div style={{ textAlign: "center", marginTop: "20px", zIndex: 2 }}>
+        <h1
+          style={{
+            fontSize: "32px",
+            lineHeight: 1.2,
+            marginBottom: "12px",
+            textShadow: "0 0 12px rgba(77,166,255,0.4)",
+          }}
+        >
+          Fresh laundry,<br /> delivered with care
+        </h1>
+
+        <p style={{ fontSize: "15px", color: "#9aa3c7", marginBottom: "30px" }}>
+          Pickup, wash, dry & fold — powered by trusted local washers.
+        </p>
+
+        <button
+          id="loginBtn"
+          style={{
+            width: "100%",
+            maxWidth: "320px",
+            padding: "12px",
+            borderRadius: "999px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "16px",
+            margin: "10px auto",
+            display: "block",
+            transition: "0.15s ease",
+            background: "linear-gradient(135deg, #4da6ff, #7a5cff)",
+            color: "#fff",
+            boxShadow: "0 12px 28px rgba(77,166,255,0.45)",
+          }}
+        >
+          Log In
+        </button>
+
+        <button
+          id="signupBtn"
+          style={{
+            width: "100%",
+            maxWidth: "320px",
+            padding: "12px",
+            borderRadius: "999px",
+            border: "1px solid rgba(255,255,255,0.12)",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "16px",
+            margin: "10px auto",
+            display: "block",
+            transition: "0.15s ease",
+            background: "rgba(255,255,255,0.06)",
+            color: "#9aa3c7",
+          }}
+        >
+          Create Account
+        </button>
+      </div>
+    </main>
+  );
+}
