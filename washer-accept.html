@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta-name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Accept Jobs – Laundry Bubbles</title>
 
     <style>
@@ -33,6 +33,7 @@
             border: 2px solid #F4C542;
             margin-bottom: 20px;
             font-size: 1.1rem;
+            line-height: 1.5rem;
         }
 
         .btn {
@@ -54,15 +55,39 @@
 <body>
     <header>Available Jobs</header>
 
-    <div class="container">
-        <div class="job-box">
-            Pickup at: 123 Main St  
-            Time: 3:00 PM  
-            Notes: Leave at door  
-            <a href="washer_pickup.html" class="btn">Accept Job</a>
-        </div>
-
-        <a href="washer.html" class="btn">Back to Dashboard</a>
+    <div class="container" id="jobs-container">
+        <!-- Jobs will load here dynamically -->
     </div>
+
+    <a href="washer.html" class="btn" style="margin: 20px;">Back to Dashboard</a>
+
+    <script>
+        async function loadJobs() {
+            const res = await fetch('/api/jobs');
+            if (!res.ok) {
+                document.getElementById('jobs-container').innerHTML =
+                    '<p>No jobs available or subscription required.</p>';
+                return;
+            }
+
+            const jobs = await res.json();
+            const container = document.getElementById('jobs-container');
+            container.innerHTML = '';
+
+            jobs.forEach(job => {
+                const box = document.createElement('div');
+                box.className = 'job-box';
+                box.innerHTML = `
+                    <strong>Pickup at:</strong> ${job.address}<br>
+                    <strong>Time:</strong> ${job.time}<br>
+                    <strong>Notes:</strong> ${job.notes}<br>
+                    <a href="washer-pickup.html?job=${job.id}" class="btn">Accept Job</a>
+                `;
+                container.appendChild(box);
+            });
+        }
+
+        loadJobs();
+    </script>
 </body>
 </html>
