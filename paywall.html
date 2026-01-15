@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laundry Bubbles – Access Required</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        color: white;
+        overflow: hidden;
+        background: linear-gradient(135deg, #4B2EFF, #7A4FFF);
+    }
+
+    /* Bubble animation */
+    .bubble {
+        position: absolute;
+        bottom: -100px;
+        background: rgba(255,255,255,0.25);
+        border-radius: 50%;
+        animation: rise 12s infinite ease-in;
+        pointer-events: none;
+    }
+
+    @keyframes rise {
+        0% { transform: translateY(0) scale(1); opacity: 1; }
+        80% { opacity: 0.8; }
+        100% { transform: translateY(-120vh) scale(1.4); opacity: 0; }
+    }
+
+    header {
+        text-align: center;
+        padding: 25px;
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .content-box {
+        position: relative;
+        z-index: 10;
+        background: rgba(0,0,0,0.35);
+        margin: 20px;
+        padding: 25px;
+        border-radius: 15px;
+        backdrop-filter: blur(6px);
+    }
+
+    .btn {
+        display: block;
+        background: #FFD447;
+        color: #4B2E1F;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-top: 20px;
+        text-decoration: none;
+        border: 2px solid #FF9F1C;
+    }
+
+    .stats {
+        margin-top: 15px;
+        font-size: 1.1rem;
+        line-height: 1.6rem;
+    }
+</style>
+</head>
+
+<body>
+
+<header>Welcome to Laundry Bubbles</header>
+
+<div class="content-box" id="paywall-box">
+    <h2>Access Laundry Bubbles</h2>
+
+    <p>
+        Laundry Bubbles costs <strong>$1 per day</strong> to use.  
+        This small fee unlocks everything:
+    </p>
+
+    <ul>
+        <li>See active clients in your area</li>
+        <li>Accept loads instantly</li>
+        <li>Make money from home or at the laundromat</li>
+        <li>All payments go directly to you after the $1 access fee</li>
+    </ul>
+
+    <div class="stats" id="stats-box">
+        Loading activity…
+    </div>
+
+    <a id="pay-btn" class="btn">Pay $1 for 24 Hours</a>
+</div>
+
+<script>
+/* AUTO‑UNLOCK FOR YOUR EMAIL */
+const OWNER_EMAIL = "boardwalkclay1@gmail.com";
+
+async function checkAccess() {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+
+    if (data.email === OWNER_EMAIL) {
+        window.location.href = "/dashboard.html";
+        return;
+    }
+}
+
+checkAccess();
+
+/* LOAD STATS */
+async function loadStats() {
+    const res = await fetch('/api/paywall-stats');
+    const data = await res.json();
+
+    document.getElementById('stats-box').innerHTML = `
+        <strong>${data.activeUsers}</strong> active users nearby<br>
+        <strong>${data.availableLoads}</strong> loads need to be done<br>
+        Laundry Bubbles is a great way to earn from home or gather loads and take them to the laundromat.
+    `;
+}
+
+loadStats();
+
+/* PAYMENT BUTTON */
+document.getElementById('pay-btn').addEventListener('click', async () => {
+    const res = await fetch('/api/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        window.location.href = "/dashboard.html";
+    }
+});
+
+/* BUBBLE GENERATOR */
+function createBubble() {
+    const bubble = document.createElement('div');
+    const size = Math.random() * 60 + 20;
+
+    bubble.classList.add('bubble');
+    bubble.style.width = size + "px";
+    bubble.style.height = size + "px";
+    bubble.style.left = Math.random() * 100 + "vw";
+    bubble.style.animationDuration = (8 + Math.random() * 6) + "s";
+
+    document.body.appendChild(bubble);
+
+    setTimeout(() => bubble.remove(), 14000);
+}
+
+setInterval(createBubble, 300);
+</script>
+
+</body>
+</html>
