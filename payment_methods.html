@@ -1,0 +1,23 @@
+<button id="pay-btn">$1 for 24 hours</button>
+<div id="pay-status"></div>
+
+<script>
+document.getElementById('pay-btn').addEventListener('click', async () => {
+  const res = await fetch('/api/create-payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+
+  const data = await res.json();
+  const status = document.getElementById('pay-status');
+
+  if (data.success) {
+    status.textContent = 'Payment successful. You now have 24 hours of access.';
+    // Optionally redirect to dashboard
+    setTimeout(() => window.location.href = '/dashboard.html', 1000);
+  } else {
+    status.textContent = data.error || 'Payment failed.';
+  }
+});
+</script>
