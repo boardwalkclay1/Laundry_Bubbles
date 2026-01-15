@@ -81,51 +81,54 @@
     <div id="loading" class="loading" style="display:none;">Processing your order...</div>
   </div>
 
-  <script type="module">
-    import { supabase } from "./supabase.js";
+  <script>
+    // -----------------------------------
+    // AUTH + PAYWALL CHECK
+    // -----------------------------------
+    async function checkAccess() {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        window.location.href = "login.html";
+        return;
+      }
 
-    // -----------------------------
-    // AUTH CHECK
-    // -----------------------------
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+      const data = await res.json();
 
-    // -----------------------------
-    // NOTIFICATION SENDER
-    // -----------------------------
+      if (!data.activeSubscription && data.email !== "boardwalkclay1@gmail.com") {
+        window.location.href = "paywall.html";
+      }
+
+      return data;
+    }
+
+    const user = await checkAccess();
+
+    // -----------------------------------
+    // FIND BEST WASHER (Node API)
+    // -----------------------------------
+    async function findBestWasher() {
+      const res = await fetch("/api/find-washer");
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      return data.washerId || null;
+    }
+
+    // -----------------------------------
+    // SEND NOTIFICATION
+    // -----------------------------------
     async function sendNotification(userId, title, message) {
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        title,
-        message
+      await fetch("/api/send-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, title, message })
       });
     }
 
-    // -----------------------------
-    // AUTO-WASHER MATCHING LOGIC
-    // -----------------------------
-    async function findBestWasher() {
-      // Get all approved + available washers
-      const { data: washers } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "washer")
-        .eq("verification_status", "approved")
-        .eq("available", true);
-
-      if (!washers || washers.length === 0) return null;
-
-      // Simple MVP matching:
-      // Pick the washer with the smallest radius (closest)
-      washers.sort((a, b) => (a.radius || 999) - (b.radius || 999));
-
-      return washers[0].id;
-    }
-
-    // -----------------------------
+    // -----------------------------------
     // CREATE ORDER
-    // -----------------------------
-    window.createOrder = async function () {
+    // -----------------------------------
+    async function createOrder() {
       const loads = Number(document.getElementById("loads").value);
       const pickupInput = document.getElementById("pickupTime").value;
       const notes = document.getElementById("notes").value.trim();
@@ -144,25 +147,25 @@
 
       const pickup_time = new Date(pickupInput).toISOString();
 
-      // 1. Find best washer
+      // 1. Auto-match washer
       const washerId = await findBestWasher();
 
-      // 2. Create order
-      const { data: order, error } = await supabase
-        .from("orders")
-        .insert({
-          client_id: session.user.id,
-          washer_id: washerId,
-          status: washerId ? "requested" : "requested",
+      // 2. Create order in JSON DB
+      const res = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: user.id,
+          washerId,
           loads,
           pickup_time,
           notes
         })
-        .select("*")
-        .single();
+      });
 
-      if (error) {
-        console.error("Create order error:", error);
+      const data = await res.json();
+
+      if (!res.ok) {
         alert("Error creating order.");
         loading.style.display = "none";
         return;
@@ -170,25 +173,25 @@
 
       // 3. Notify client
       await sendNotification(
-        session.user.id,
+        user.id,
         "Order Created",
         "Your laundry order has been created!"
       );
 
-      // 4. Notify washer (if matched)
+      // 4. Notify washer
       if (washerId) {
         await sendNotification(
           washerId,
-          "New Order Assigned",
-          "You have been assigned a new laundry order."
+          "New Laundry Order",
+          "A new laundry pickup has been assigned to you."
         );
       }
 
       loading.style.display = "none";
 
-      // 5. Redirect to order detail
-      window.location.href = `client-order-detail.html?order_id=${order.id}`;
-    };
+      // 5. Redirect
+      window.location.href = `client-order-details.html?order_id=${data.orderId}`;
+    }
   </script>
 </body>
 </html>
