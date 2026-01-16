@@ -43,6 +43,21 @@
         .btn:hover {
             background: #E3B63A;
         }
+
+        .status-box {
+            background: #ffe9b8;
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            border: 2px solid #D96E30;
+        }
+
+        .warning {
+            background: #ffb3b3;
+            border-color: #cc0000;
+            color: #5A3E2B;
+        }
     </style>
 </head>
 
@@ -50,9 +65,67 @@
     <header>Washer Dashboard</header>
 
     <div class="container">
-        <a href="washer_accept.html" class="btn">View Available Jobs</a>
-        <a href="washer_pickup.html" class="btn">Pickup Status</a>
-        <a href="washer_dropoff.html" class="btn">Dropoff Status</a>
+        <div id="statusBox" class="status-box">Loading your washer status…</div>
+
+        <a href="washer_accept.html" class="btn" id="incomingBtn">View Available Jobs</a>
+        <a href="washer_pickup.html" class="btn" id="pickupBtn">Pickup Status</a>
+        <a href="washer_dropoff.html" class="btn" id="dropoffBtn">Dropoff Status</a>
+
+        <a href="washer-verification.html" class="btn">Verification</a>
+        <a href="washer-availability.html" class="btn">Set Availability</a>
+        <a href="washer-orders.html" class="btn">My Orders</a>
+        <a href="washer-earnings.html" class="btn">Earnings</a>
+        <a href="washer-profile.html" class="btn">Profile</a>
     </div>
+
+    <script>
+        // -----------------------------
+        // AUTH + PAYWALL CHECK
+        // -----------------------------
+        async function checkAccess() {
+            const res = await fetch("/api/me");
+            if (!res.ok) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            const data = await res.json();
+
+            if (!data.activeSubscription && data.email !== "boardwalkclay1@gmail.com") {
+                window.location.href = "paywall.html";
+                return;
+            }
+
+            return data;
+        }
+
+        const user = await checkAccess();
+
+        // -----------------------------
+        // LOAD WASHER DASHBOARD DATA
+        // -----------------------------
+        async function loadWasherStatus() {
+            const res = await fetch(`/api/washer-dashboard?userId=${user.id}`);
+            const data = await res.json();
+
+            const box = document.getElementById("statusBox");
+
+            let msg = `
+                Verification: <strong>${data.verificationStatus}</strong><br>
+                Incoming Jobs: <strong>${data.incomingCount}</strong><br>
+                Active Jobs: <strong>${data.activeCount}</strong><br>
+                Availability: <strong>${data.available ? "Available" : "Unavailable"}</strong>
+            `;
+
+            box.innerHTML = msg;
+
+            if (data.verificationStatus !== "approved") {
+                box.classList.add("warning");
+                box.innerHTML += `<br><br>You must be verified to accept jobs.`;
+            }
+        }
+
+        loadWasherStatus();
+    </script>
 </body>
 </html>
