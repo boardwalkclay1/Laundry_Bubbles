@@ -177,7 +177,7 @@
 
       <div style="margin-top:10px;">
         <div class="section-title">About</div>
-        <p class="muted" id="washerBio">This washer keeps your clothes fresh, folded, and on time.</p>
+        <p class="muted" id="washerBio"></p>
       </div>
 
       <button class="btn btn-primary" id="requestBtn">Request pickup</button>
@@ -185,36 +185,65 @@
   </main>
 
   <script>
-    function nav(page) { window.location.href = page; }
+    // -----------------------------
+    // AUTH + PAYWALL CHECK
+    // -----------------------------
+    async function checkAccess() {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        window.location.href = "login.html";
+        return;
+      }
 
-    document.getElementById("backBtn").onclick = () => nav("client-map.html");
+      const data = await res.json();
 
-    let washer = null;
-    try {
-      const raw = localStorage.getItem("lb_selected_washer");
-      if (raw) washer = JSON.parse(raw);
-    } catch (e) {}
+      if (!data.activeSubscription && data.email !== "boardwalkclay1@gmail.com") {
+        window.location.href = "paywall.html";
+        return;
+      }
 
-    if (!washer) {
+      return data;
+    }
+
+    const user = await checkAccess();
+
+    // -----------------------------
+    // GET WASHER ID FROM URL
+    // -----------------------------
+    const params = new URLSearchParams(window.location.search);
+    const washerId = params.get("id");
+
+    if (!washerId) {
       document.getElementById("profileCard").innerHTML =
-        "<p class='muted'>No washer selected. Go back to the map and choose one.</p>";
-    } else {
+        "<p class='muted'>No washer selected. Return to the map.</p>";
+    }
+
+    // -----------------------------
+    // LOAD WASHER PROFILE
+    // -----------------------------
+    async function loadWasher() {
+      const res = await fetch(`/api/washer-profile?washerId=${washerId}`);
+      if (!res.ok) {
+        document.getElementById("profileCard").innerHTML =
+          "<p class='muted'>Washer not found.</p>";
+        return;
+      }
+
+      const washer = await res.json();
+
       document.getElementById("washerAvatar").textContent = washer.name.charAt(0);
       document.getElementById("washerName").textContent = washer.name;
 
-      const distance = washer.distance_mi
-        ? washer.distance_mi.toFixed(1) + " mi away"
-        : (washer.distance || "") + " away";
-
       document.getElementById("washerMeta").textContent =
-        `${distance} · ${washer.rating || "5.0"}★ · ${washer.jobs || 0} jobs`;
+        `${washer.distance || "Nearby"} · ${washer.rating || "5.0"}★ · ${washer.jobs || 0} jobs`;
 
       document.getElementById("washerPrice").textContent =
         washer.price_per_load ? `$${washer.price_per_load} per load` : "Pricing available on request.";
 
       const tagsEl = document.getElementById("washerTags");
       tagsEl.innerHTML = "";
-      if (Array.isArray(washer.tags)) {
+
+      if (Array.isArray(washer.tags) && washer.tags.length > 0) {
         washer.tags.forEach(t => {
           const span = document.createElement("span");
           span.className = "tag";
@@ -225,13 +254,21 @@
         tagsEl.innerHTML = "<span class='tag'>Standard wash & fold</span>";
       }
 
-      if (washer.bio) {
-        document.getElementById("washerBio").textContent = washer.bio;
-      }
+      document.getElementById("washerBio").textContent =
+        washer.bio || "This washer keeps your clothes fresh, folded, and on time.";
     }
 
+    loadWasher();
+
+    // -----------------------------
+    // REQUEST PICKUP
+    // -----------------------------
     document.getElementById("requestBtn").onclick = () => {
-      nav("request-pickup.html");
+      window.location.href = `request-pickup.html?washerId=${washerId}`;
+    };
+
+    document.getElementById("backBtn").onclick = () => {
+      window.location.href = "client-map.html";
     };
   </script>
 </body>
