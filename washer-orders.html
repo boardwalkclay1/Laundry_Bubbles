@@ -33,22 +33,48 @@
 
   <div id="ordersContainer">Loading...</div>
 
-  <script type="module">
-    import { supabase } from "./supabase.js";
+  <script>
+    // -----------------------------
+    // AUTH + PAYWALL CHECK
+    // -----------------------------
+    async function checkAccess() {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        window.location.href = "login.html";
+        return;
+      }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = "login.html";
+      const data = await res.json();
 
+      if (!data.activeSubscription && data.email !== "boardwalkclay1@gmail.com") {
+        window.location.href = "paywall.html";
+        return;
+      }
+
+      return data;
+    }
+
+    const user = await checkAccess();
+
+    // -----------------------------
+    // LOAD WASHER ORDERS
+    // -----------------------------
     async function loadOrders() {
       const container = document.getElementById("ordersContainer");
 
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("washer_id", session.user.id)
-        .order("created_at", { ascending: false });
+      const res = await fetch(`/api/washer-orders?washerId=${user.id}`);
+      if (!res.ok) {
+        container.innerHTML = "Unable to load orders.";
+        return;
+      }
 
+      const orders = await res.json();
       container.innerHTML = "";
+
+      if (orders.length === 0) {
+        container.innerHTML = "<p>No orders yet.</p>";
+        return;
+      }
 
       orders.forEach(order => {
         const pickup = order.pickup_time
@@ -65,32 +91,21 @@
             Pickup: ${pickup}
           </div>
         `;
+
         div.onclick = () => {
-          if (order.status === "pending_acceptance") {
-            window.location.href = "washer-incoming.html";
-          } else {
-            window.location.href = `washer-order-page.html?order_id=${order.id}`;
-          }
+          window.location.href = `washer-order-page.html?order_id=${order.id}`;
         };
+
         container.appendChild(div);
       });
     }
 
-    // REAL-TIME UPDATES
-    supabase
-      .channel("washer-orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        payload => {
-          if (payload.new.washer_id === session.user.id) {
-            loadOrders();
-          }
-        }
-      )
-      .subscribe();
+    loadOrders();
 
-    await loadOrders();
+    // -----------------------------
+    // OPTIONAL: AUTO-REFRESH EVERY 10 SECONDS
+    // -----------------------------
+    setInterval(loadOrders, 10000);
   </script>
 </body>
 </html>
