@@ -57,7 +57,7 @@
 </head>
 <body>
   <header>
-    <div class="back" onclick="window.location.href='settings.html'">←</div>
+    <div class="back" onclick="window.location.href='washer-settings.html'">←</div>
     <div>
       <h1>Payout settings</h1>
       <p class="sub">Set how you receive your earnings.</p>
@@ -82,33 +82,79 @@
   </section>
 
   <script>
-    function loadPayoutSettings(){
-      const raw = localStorage.getItem("lb_payout_settings");
-      if(!raw) return;
-      const s = JSON.parse(raw);
+    // -----------------------------
+    // AUTH + PAYWALL CHECK
+    // -----------------------------
+    async function checkAccess() {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!data.activeSubscription && data.email !== "boardwalkclay1@gmail.com") {
+        window.location.href = "paywall.html";
+        return;
+      }
+
+      return data;
+    }
+
+    const user = await checkAccess();
+
+    // -----------------------------
+    // LOAD PAYOUT SETTINGS
+    // -----------------------------
+    async function loadPayoutSettings() {
+      const res = await fetch(`/api/payout-settings?userId=${user.id}`);
+      if (!res.ok) return;
+
+      const s = await res.json();
+
       document.getElementById("paypalEmailWasher").value = s.paypalEmail || "";
       document.getElementById("cashappTagWasher").value = s.cashappTag || "";
       document.getElementById("bankNicknameWasher").value = s.bankNickname || "";
+
       renderSummary(s);
     }
 
-    function renderSummary(s){
+    function renderSummary(s) {
       const parts = [];
-      if(s.paypalEmail) parts.push("PayPal: " + s.paypalEmail);
-      if(s.cashappTag) parts.push("CashApp: " + s.cashappTag);
-      if(s.bankNickname) parts.push("Bank: " + s.bankNickname);
+      if (s.paypalEmail) parts.push("PayPal: " + s.paypalEmail);
+      if (s.cashappTag) parts.push("CashApp: " + s.cashappTag);
+      if (s.bankNickname) parts.push("Bank: " + s.bankNickname);
+
       const el = document.getElementById("payoutSummary");
-      el.textContent = parts.length ? "Current: " + parts.join(" · ") : "No payout method set yet.";
+      el.textContent = parts.length
+        ? "Current: " + parts.join(" · ")
+        : "No payout method set yet.";
     }
 
-    document.getElementById("savePayoutBtn").onclick = () => {
-      const s = {
+    // -----------------------------
+    // SAVE PAYOUT SETTINGS
+    // -----------------------------
+    document.getElementById("savePayoutBtn").onclick = async () => {
+      const payload = {
+        userId: user.id,
         paypalEmail: document.getElementById("paypalEmailWasher").value.trim(),
         cashappTag: document.getElementById("cashappTagWasher").value.trim(),
         bankNickname: document.getElementById("bankNicknameWasher").value.trim()
       };
-      localStorage.setItem("lb_payout_settings", JSON.stringify(s));
-      renderSummary(s);
+
+      const res = await fetch("/api/payout-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        alert("Error saving payout settings.");
+        return;
+      }
+
+      renderSummary(payload);
       alert("Payout settings saved.");
     };
 
