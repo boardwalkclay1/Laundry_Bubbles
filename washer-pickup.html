@@ -33,6 +33,7 @@
             border: 2px solid #F4C542;
             margin-bottom: 20px;
             font-size: 1.2rem;
+            line-height: 1.6rem;
         }
 
         .btn {
@@ -46,6 +47,7 @@
             color: #5A3E2B;
             text-decoration: none;
             border: 2px solid #D96E30;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -54,12 +56,88 @@
     <header>Pickup Status</header>
 
     <div class="container">
-        <div class="box">
-            Pickup in progress…  
-            Confirm once laundry is collected.
+        <div id="pickupBox" class="box">
+            Loading pickup details…
         </div>
 
-        <a href="washer_dropoff.html" class="btn">Confirm Pickup</a>
+        <button id="confirmBtn" class="btn">Confirm Pickup</button>
     </div>
+
+    <script>
+        // -----------------------------
+        // AUTH + PAYWALL CHECK
+        // -----------------------------
+        async function checkAccess() {
+            const res = await fetch("/api/me");
+            if (!res.ok) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            const data = await res.json();
+
+            if (!data.activeSubscription && data.email !== "boardwalkclay1@gmail.com") {
+                window.location.href = "paywall.html";
+                return;
+            }
+
+            return data;
+        }
+
+        const user = await checkAccess();
+
+        // -----------------------------
+        // LOAD ACTIVE PICKUP ORDER
+        // -----------------------------
+        let activeOrder = null;
+
+        async function loadPickup() {
+            const res = await fetch(`/api/washer-active-pickup?washerId=${user.id}`);
+            const box = document.getElementById("pickupBox");
+
+            if (!res.ok) {
+                box.innerHTML = "No active pickups at the moment.";
+                document.getElementById("confirmBtn").style.display = "none";
+                return;
+            }
+
+            activeOrder = await res.json();
+
+            box.innerHTML = `
+                <strong>Pickup in progress…</strong><br><br>
+                <strong>Client:</strong> ${activeOrder.clientName}<br>
+                <strong>Address:</strong> ${activeOrder.address}<br>
+                <strong>Loads:</strong> ${activeOrder.loads}<br>
+                <strong>Pickup Time:</strong> ${new Date(activeOrder.pickup_time).toLocaleString()}<br>
+                <strong>Notes:</strong> ${activeOrder.notes || "None"}<br><br>
+                Confirm once laundry is collected.
+            `;
+        }
+
+        loadPickup();
+
+        // -----------------------------
+        // CONFIRM PICKUP
+        // -----------------------------
+        document.getElementById("confirmBtn").onclick = async () => {
+            if (!activeOrder) return;
+
+            const res = await fetch("/api/update-order-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    orderId: activeOrder.id,
+                    status: "picked_up"
+                })
+            });
+
+            if (!res.ok) {
+                alert("Error updating order.");
+                return;
+            }
+
+            window.location.href = `washer_dropoff.html?orderId=${activeOrder.id}`;
+        };
+    </script>
 </body>
 </html>
