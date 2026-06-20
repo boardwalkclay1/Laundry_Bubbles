@@ -10,7 +10,7 @@
       --primary: #4da6ff;
       --accent: #7a5cff;
       --text: #f9fbff;
-      --muted: #9aa3c7;
+      --muted: #c9d2f0;
     }
 
     * {
@@ -22,29 +22,21 @@
 
     body {
       min-height: 100vh;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(77,166,255,0.18), transparent 60%),
-        radial-gradient(circle at 80% 80%, rgba(122,92,255,0.18), transparent 60%),
-        #030715;
-      color: var(--text);
+      background: url("/img/bubbles-index.jpg") center/cover no-repeat fixed;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 30px 20px;
-      overflow-x: hidden;
+      padding: 40px 20px;
+      color: var(--text);
       position: relative;
+      overflow-x: hidden;
     }
 
-    /* Grid overlay */
-    .grid-overlay {
+    /* Dark overlay for readability */
+    .overlay {
       position: fixed;
       inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-      background-size: 48px 48px;
-      opacity: 0.35;
-      pointer-events: none;
+      background: rgba(0, 0, 0, 0.55);
       z-index: 0;
     }
 
@@ -59,58 +51,53 @@
 
     .logo {
       display: flex;
+      flex-direction: column;
       align-items: center;
       gap: 12px;
     }
 
-    .logo-circle {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--primary));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 20px;
-      color: #fff;
-      box-shadow: 0 0 18px rgba(77,166,255,0.45);
+    .logo img {
+      width: 120px;
+      height: auto;
+      filter: drop-shadow(0 0 12px rgba(77,166,255,0.45));
     }
 
     .logo-text {
-      font-size: 20px;
-      font-weight: 600;
+      font-size: 22px;
+      font-weight: 700;
+      text-shadow: 0 0 12px rgba(0,0,0,0.6);
     }
 
     .hero {
       text-align: center;
-      margin-top: 20px;
+      margin-top: 10px;
       z-index: 2;
     }
 
     .hero h1 {
-      font-size: 32px;
+      font-size: 34px;
       line-height: 1.2;
       margin-bottom: 12px;
-      text-shadow: 0 0 12px rgba(77,166,255,0.4);
+      text-shadow: 0 0 14px rgba(0,0,0,0.7);
     }
 
     .hero p {
-      font-size: 15px;
+      font-size: 16px;
       color: var(--muted);
-      margin-bottom: 30px;
+      margin-bottom: 32px;
+      text-shadow: 0 0 10px rgba(0,0,0,0.6);
     }
 
     .btn {
       width: 100%;
       max-width: 320px;
-      padding: 12px;
+      padding: 14px;
       border-radius: 999px;
       border: none;
       cursor: pointer;
       font-weight: 600;
-      font-size: 16px;
-      margin: 10px auto;
+      font-size: 17px;
+      margin: 12px auto;
       display: block;
       transition: 0.15s ease;
       z-index: 2;
@@ -129,13 +116,13 @@
     }
 
     .btn-secondary {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
       color: var(--muted);
     }
 
     .btn-secondary:hover {
-      background: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.18);
       color: #fff;
     }
   </style>
@@ -143,11 +130,11 @@
 
 <body>
 
-  <div class="grid-overlay"></div>
+  <div class="overlay"></div>
 
   <header>
     <div class="logo">
-      <div class="logo-circle">LB</div>
+      <img src="/img/bubbles-logo.jpg" alt="Laundry Bubbles Logo" />
       <div class="logo-text">Laundry Bubbles</div>
     </div>
   </header>
@@ -162,11 +149,11 @@
 
   <script>
     document.getElementById("loginBtn").onclick = () => {
-      window.location.href = "login.html";
+      window.location.href = "/pages/login.html";
     };
 
     document.getElementById("signupBtn").onclick = () => {
-      window.location.href = "signup.html";
+      window.location.href = "/pages/signup.html";
     };
   </script>
 
