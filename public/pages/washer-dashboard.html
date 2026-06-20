@@ -4,57 +4,153 @@
   <meta charset="UTF-8" />
   <title>Washer Dashboard – Laundry Bubbles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
-    :root{--primary:#4da6ff;--accent:#7a5cff;--text:#f9fbff;--muted:#9aa3c7;--card:rgba(255,255,255,0.05);}
-    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif;}
-    body{
+    :root {
+      --primary:#4da6ff;
+      --accent:#7a5cff;
+      --text:#f9fbff;
+      --muted:#c9d2f0;
+      --card:rgba(255,255,255,0.06);
+    }
+
+    * {
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:system-ui,sans-serif;
+    }
+
+    body {
       min-height:100vh;
-      background:
-        radial-gradient(circle at 20% 20%,rgba(77,166,255,0.18),transparent 60%),
-        radial-gradient(circle at 80% 80%,rgba(122,92,255,0.18),transparent 60%),
-        #030715;
+      background:url("/img/bubbles-index.jpg") center/cover no-repeat fixed;
       color:var(--text);
-      padding:18px;
-      overflow-x:hidden;
+      padding:20px;
       position:relative;
+      overflow-x:hidden;
     }
-    .grid-overlay{position:fixed;inset:0;background-image:
-      linear-gradient(rgba(255,255,255,0.06) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px);
-      background-size:48px 48px;opacity:0.35;pointer-events:none;z-index:0;}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;position:relative;z-index:2;}
-    .brand{display:flex;align-items:center;gap:10px;}
-    .logo-circle{
-      width:42px;height:42px;border-radius:50%;
-      background:linear-gradient(135deg,var(--accent),var(--primary));
-      display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;
-      box-shadow:0 0 14px rgba(77,166,255,0.45);
+
+    /* Dark overlay */
+    .overlay {
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.55);
+      z-index:0;
     }
-    .brand-text{font-size:18px;font-weight:600;}
-    .avatar{
-      width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);
-      border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:15px;
+
+    header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:26px;
+      position:relative;
+      z-index:2;
+    }
+
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .brand img {
+      width:48px;
+      height:auto;
+      filter:drop-shadow(0 0 10px rgba(77,166,255,0.45));
+    }
+
+    .brand-text {
+      font-size:20px;
+      font-weight:700;
+      text-shadow:0 0 12px rgba(0,0,0,0.6);
+    }
+
+    .avatar {
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.2);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
       cursor:pointer;
+      color:#fff;
+      backdrop-filter:blur(4px);
     }
-    h1{font-size:24px;margin-bottom:6px;text-shadow:0 0 12px rgba(77,166,255,0.4);}
-    .sub{font-size:14px;color:var(--muted);margin-bottom:18px;}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;position:relative;z-index:2;}
-    .card{
-      background:var(--card);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:16px;
-      cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,0.4);transition:0.15s ease;
+
+    h1 {
+      font-size:26px;
+      margin-bottom:6px;
+      text-shadow:0 0 14px rgba(0,0,0,0.7);
+      position:relative;
+      z-index:2;
     }
-    .card:hover{transform:translateY(-3px);border-color:var(--primary);box-shadow:0 14px 30px rgba(77,166,255,0.4);}
-    .card-title{font-size:16px;margin-bottom:4px;}
-    .card-sub{font-size:12px;color:var(--muted);}
-    footer{margin-top:24px;text-align:center;font-size:12px;color:var(--muted);}
+
+    .sub {
+      font-size:15px;
+      color:var(--muted);
+      margin-bottom:22px;
+      text-shadow:0 0 10px rgba(0,0,0,0.6);
+      position:relative;
+      z-index:2;
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:18px;
+      position:relative;
+      z-index:2;
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid rgba(255,255,255,0.15);
+      border-radius:18px;
+      padding:18px;
+      cursor:pointer;
+      box-shadow:0 10px 24px rgba(0,0,0,0.45);
+      transition:0.15s ease;
+      backdrop-filter:blur(6px);
+    }
+
+    .card:hover {
+      transform:translateY(-3px);
+      border-color:var(--primary);
+      box-shadow:0 14px 30px rgba(77,166,255,0.45);
+    }
+
+    .card-title {
+      font-size:17px;
+      margin-bottom:6px;
+      font-weight:600;
+    }
+
+    .card-sub {
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    footer {
+      margin-top:30px;
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+      position:relative;
+      z-index:2;
+    }
   </style>
 </head>
+
 <body>
-  <div class="grid-overlay"></div>
+
+  <div class="overlay"></div>
 
   <header>
     <div class="brand">
-      <div class="logo-circle">LB</div>
+      <img src="/img/bubbles-logo.jpg" alt="Laundry Bubbles Logo" />
       <div class="brand-text">Laundry Bubbles</div>
     </div>
     <div class="avatar" id="avatarInitial">W</div>
@@ -65,23 +161,27 @@
     <p class="sub">Washer mode · See nearby requests, chat, and track your earnings.</p>
 
     <section class="grid">
-      <div class="card" onclick="nav('washer-map.html')">
+      <div class="card" onclick="nav('/pages/washer-map.html')">
         <div class="card-title">Pickup map</div>
         <div class="card-sub">View nearby pickup requests on the map.</div>
       </div>
-      <div class="card" onclick="nav('washer-active-loads.html')">
+
+      <div class="card" onclick="nav('/pages/washer-active-loads.html')">
         <div class="card-title">Active loads</div>
         <div class="card-sub">See loads that are in progress.</div>
       </div>
-      <div class="card" onclick="nav('washer-earnings.html')">
+
+      <div class="card" onclick="nav('/pages/washer-earnings.html')">
         <div class="card-title">Earnings</div>
         <div class="card-sub">See what you’ve made so far.</div>
       </div>
-      <div class="card" onclick="nav('inbox.html')">
+
+      <div class="card" onclick="nav('/pages/inbox.html')">
         <div class="card-title">Inbox</div>
         <div class="card-sub">Message your clients about their orders.</div>
       </div>
-      <div class="card" onclick="nav('settings.html')">
+
+      <div class="card" onclick="nav('/pages/settings.html')">
         <div class="card-title">Settings</div>
         <div class="card-sub">Update profile, mode, and payouts.</div>
       </div>
@@ -91,24 +191,28 @@
   <footer>Washer mode · Atlanta area</footer>
 
   <script>
-    function nav(page){window.location.href = page;}
+    function nav(page){
+      window.location.href = page;
+    }
 
     const avatar = document.getElementById("avatarInitial");
-    avatar.onclick = () => nav("settings.html");
+    avatar.onclick = () => nav("/pages/settings.html");
 
-    try{
+    try {
       const raw = localStorage.getItem("lb_user");
       if(raw){
         const user = JSON.parse(raw);
         user.role = "washer";
         localStorage.setItem("lb_user", JSON.stringify(user));
+
         if(user.email){
           const name = user.full_name || user.email.split("@")[0];
           document.getElementById("greeting").textContent = "Welcome back, " + name;
           avatar.textContent = name.charAt(0).toUpperCase();
         }
       }
-    }catch(e){}
+    } catch(e){}
   </script>
+
 </body>
 </html>
