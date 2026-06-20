@@ -32,7 +32,6 @@
       overflow-x: hidden;
     }
 
-    /* Dark overlay for readability */
     .overlay {
       position: fixed;
       inset: 0;
@@ -42,10 +41,10 @@
 
     header {
       width: 100%;
-      max-width: 600px;
+      max-width: 700px;
       display: flex;
       justify-content: center;
-      margin-bottom: 40px;
+      margin-bottom: 50px;
       z-index: 2;
     }
 
@@ -53,51 +52,51 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .logo img {
-      width: 120px;
+      width: 180px; /* increased from 120px */
       height: auto;
-      filter: drop-shadow(0 0 12px rgba(77,166,255,0.45));
+      filter: drop-shadow(0 0 16px rgba(77,166,255,0.45));
     }
 
     .logo-text {
-      font-size: 22px;
+      font-size: 26px;
       font-weight: 700;
-      text-shadow: 0 0 12px rgba(0,0,0,0.6);
+      text-shadow: 0 0 14px rgba(0,0,0,0.6);
     }
 
     .hero {
       text-align: center;
-      margin-top: 10px;
+      margin-top: 20px;
       z-index: 2;
     }
 
     .hero h1 {
-      font-size: 34px;
+      font-size: 36px;
       line-height: 1.2;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       text-shadow: 0 0 14px rgba(0,0,0,0.7);
     }
 
     .hero p {
-      font-size: 16px;
+      font-size: 17px;
       color: var(--muted);
-      margin-bottom: 32px;
+      margin-bottom: 36px;
       text-shadow: 0 0 10px rgba(0,0,0,0.6);
     }
 
     .btn {
       width: 100%;
-      max-width: 320px;
-      padding: 14px;
+      max-width: 340px;
+      padding: 15px;
       border-radius: 999px;
       border: none;
       cursor: pointer;
       font-weight: 600;
-      font-size: 17px;
-      margin: 12px auto;
+      font-size: 18px;
+      margin: 14px auto;
       display: block;
       transition: 0.15s ease;
       z-index: 2;
