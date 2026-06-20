@@ -7,183 +7,114 @@
 
   <style>
     :root {
-      --primary:#4da6ff;
-      --accent:#7a5cff;
-      --text:#f9fbff;
-      --muted:#c9d2f0;
-      --card:rgba(255,255,255,0.06);
+      --primary:#4da6ff; --accent:#7a5cff; --text:#f9fbff; --muted:#9aa3c7;
+      --card:rgba(255,255,255,0.05);
     }
-
-    * {
-      margin:0;
-      padding:0;
-      box-sizing:border-box;
-      font-family:system-ui,sans-serif;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui,sans-serif; }
 
     body {
       min-height:100vh;
-      background:url("../img/bubbles-index.jpg") center/cover no-repeat fixed;
+      background:
+        radial-gradient(circle at 20% 20%,rgba(77,166,255,0.18),transparent 60%),
+        radial-gradient(circle at 80% 80%,rgba(122,92,255,0.18),transparent 60%),
+        #030715;
       color:var(--text);
-      padding:22px;
-      position:relative;
+      padding:18px;
       overflow-x:hidden;
-    }
-
-    /* Dark overlay */
-    .overlay {
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.55);
-      z-index:0;
     }
 
     header {
       display:flex;
       justify-content:space-between;
       align-items:center;
-      margin-bottom:26px;
-      position:relative;
-      z-index:2;
+      margin-bottom:22px;
     }
 
-    .brand {
-      display:flex;
-      align-items:center;
-      gap:14px;
-    }
-
-    .brand img {
-      width:70px; /* bigger logo */
-      height:auto;
-      filter:drop-shadow(0 0 14px rgba(77,166,255,0.55));
-    }
-
-    .brand-text {
-      font-size:22px;
-      font-weight:700;
-      text-shadow:0 0 14px rgba(0,0,0,0.7);
+    .logo-circle {
+      width:42px; height:42px;
+      border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),var(--primary));
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:18px; color:#fff;
+      box-shadow:0 0 14px rgba(77,166,255,0.45);
     }
 
     .avatar {
-      width:42px;
-      height:42px;
+      width:38px; height:38px;
       border-radius:50%;
-      background:rgba(255,255,255,0.1);
-      border:1px solid rgba(255,255,255,0.2);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:17px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.15);
+      display:flex; align-items:center; justify-content:center;
       cursor:pointer;
-      backdrop-filter:blur(4px);
     }
 
-    h1 {
-      font-size:28px;
-      margin-bottom:8px;
-      text-shadow:0 0 14px rgba(0,0,0,0.7);
-      position:relative;
-      z-index:2;
-    }
-
-    .sub {
-      font-size:15px;
-      color:var(--muted);
-      margin-bottom:22px;
-      text-shadow:0 0 10px rgba(0,0,0,0.6);
-      position:relative;
-      z-index:2;
-    }
+    h1 { font-size:24px; margin-bottom:6px; }
+    .sub { font-size:14px; color:var(--muted); margin-bottom:18px; }
 
     .mini-map {
       width:100%;
-      height:200px;
+      height:180px;
       border-radius:20px;
-      border:1px solid rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.14);
       overflow:hidden;
       position:relative;
       cursor:pointer;
-      box-shadow:0 12px 30px rgba(0,0,0,0.55);
-      margin-bottom:26px;
-      backdrop-filter:blur(6px);
-      z-index:2;
+      box-shadow:0 12px 30px rgba(0,0,0,0.6);
+      margin-bottom:22px;
     }
 
     #miniMap { width:100%; height:100%; }
 
     .mini-map-label {
-      position:absolute;
-      left:12px;
-      bottom:12px;
-      background:rgba(3,7,21,0.85);
-      padding:5px 12px;
+      position:absolute; left:12px; bottom:12px;
+      background:rgba(3,7,21,0.9);
+      padding:4px 10px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,0.18);
       font-size:13px;
     }
 
     .mini-map-hint {
-      position:absolute;
-      right:12px;
-      bottom:12px;
-      font-size:11px;
-      color:var(--muted);
+      position:absolute; right:12px; bottom:12px;
+      font-size:11px; color:var(--muted);
     }
 
     .grid {
       display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:18px;
-      position:relative;
-      z-index:2;
+      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+      gap:16px;
     }
 
     .card {
       background:var(--card);
-      border:1px solid rgba(255,255,255,0.15);
+      border:1px solid rgba(255,255,255,0.12);
       border-radius:18px;
-      padding:18px;
+      padding:16px;
       cursor:pointer;
       transition:0.15s ease;
-      box-shadow:0 10px 24px rgba(0,0,0,0.45);
-      backdrop-filter:blur(6px);
     }
 
     .card:hover {
       transform:translateY(-3px);
       border-color:var(--primary);
-      box-shadow:0 14px 30px rgba(77,166,255,0.45);
+      box-shadow:0 14px 30px rgba(77,166,255,0.4);
     }
 
-    .card-title {
-      font-size:17px;
-      margin-bottom:6px;
-      font-weight:600;
-    }
-
-    .card-sub {
-      font-size:13px;
-      color:var(--muted);
-    }
+    .card-title { font-size:16px; margin-bottom:4px; }
+    .card-sub { font-size:12px; color:var(--muted); }
   </style>
 </head>
 
 <body>
-
-  <div class="overlay"></div>
-
   <header>
-    <div class="brand">
-      <img src="../img/bubbles-logo.jpg" alt="Laundry Bubbles Logo" />
-      <div class="brand-text">Laundry Bubbles</div>
-    </div>
+    <div class="logo-circle">LB</div>
     <div class="avatar" id="avatarInitial">U</div>
   </header>
 
   <h1 id="greeting">Welcome back</h1>
   <p class="sub">Client mode · Find washers near you</p>
 
+  <!-- MINI INTERACTIVE MAP -->
   <div class="mini-map" id="miniMapContainer">
     <div id="miniMap"></div>
     <div class="mini-map-label">Nearby washers</div>
@@ -191,22 +122,22 @@
   </div>
 
   <section class="grid">
-    <div class="card" onclick="nav('/pages/client-map.html')">
+    <div class="card" onclick="nav('client-map.html')">
       <div class="card-title">Find a washer</div>
       <div class="card-sub">See nearby washers on the map.</div>
     </div>
 
-    <div class="card" onclick="nav('/pages/request-pickup.html')">
+    <div class="card" onclick="nav('request-pickup.html')">
       <div class="card-title">Request pickup</div>
       <div class="card-sub">Schedule a pickup from your location.</div>
     </div>
 
-    <div class="card" onclick="nav('/pages/inbox.html')">
+    <div class="card" onclick="nav('inbox.html')">
       <div class="card-title">Inbox</div>
       <div class="card-sub">Message washers about your loads.</div>
     </div>
 
-    <div class="card" onclick="nav('/pages/settings.html')">
+    <div class="card" onclick="nav('settings.html')">
       <div class="card-title">Settings</div>
       <div class="card-sub">Update your profile & switch modes.</div>
     </div>
@@ -217,7 +148,7 @@
   <script>
     function nav(page){ window.location.href = page; }
 
-    document.getElementById("avatarInitial").onclick = () => nav("/pages/settings.html");
+    document.getElementById("avatarInitial").onclick = () => nav("settings.html");
 
     const washers = [
       { id:"w1", name:"BeltLine Bubbles", lat:33.7550, lng:-84.39 },
@@ -260,11 +191,10 @@
         });
       }
 
-      document.getElementById("miniMapContainer").onclick = () => nav("/pages/client-map.html");
+      document.getElementById("miniMapContainer").onclick = () => nav("client-map.html");
     }
 
     window.onload = initMiniMap;
   </script>
-
 </body>
 </html>
