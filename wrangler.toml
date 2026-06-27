@@ -1,0 +1,33 @@
+name = "laundry-bubbles"
+main = "src/worker.js"
+compatibility_date = "2024-06-01"
+
+# HTTP service
+[vars]
+PLATFORM_FEE_BASE = "0.20"
+
+# D1 database
+[[d1_databases]]
+binding = "DB"
+database_name = "laundry_bubbles_db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# KV for live locations
+[[kv_namespaces]]
+binding = "LOCATIONS_KV"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Durable Objects for chat
+[[durable_objects]]
+name = "OrderChatRoom"
+class_name = "OrderChatRoom"
+
+# R2 for profile photos, receipts
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "laundry-bubbles-assets"
+
+# Dev server
+[dev]
+port = 8787
+local_protocol = "http"
